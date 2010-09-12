@@ -18,11 +18,14 @@ import org.apache.http.impl.DefaultHttpServerConnection;
 import org.apache.http.message.BufferedHeader;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.util.CharArrayBuffer;
+import org.apache.tools.tar.TarEntry;
+import org.apache.tools.tar.TarInputStream;
 
 import to.rcpt.fefi.eyefi.GetPhotoStatus;
 import to.rcpt.fefi.eyefi.GetPhotoStatusResponse;
 import to.rcpt.fefi.eyefi.StartSession;
 import to.rcpt.fefi.eyefi.StartSessionResponse;
+import to.rcpt.fefi.eyefi.UploadPhoto;
 import to.rcpt.fefi.util.MultipartInputStream;
 
 import android.app.Activity;
@@ -177,9 +180,12 @@ public class FeFi extends Activity implements Runnable {
 							Log.d(TAG, "read header " + line);
 							line = reader.readLine();
 						}
+						// check we got a SOAPENVELOPE
 						in.setBoundary(boundary);
-						skipped = in.skip(10000000);
-						Log.d(TAG, "skipped " + skipped + " to find second boundary");
+						UploadPhoto up = new UploadPhoto();
+						up.parse(in);
+						skipped = in.skip(1000);
+						Log.d(TAG, "parsed uploadphoto skipped " + skipped + " to find second boundary");
 						// process headers
 						in.setBoundary("\r\n\r\n");
 						reader = new BufferedReader(new InputStreamReader(in));
@@ -188,7 +194,15 @@ public class FeFi extends Activity implements Runnable {
 							Log.d(TAG, "read header " + line);
 							line = reader.readLine();
 						}
+						// confirm we're looking at the tar file
 						in.setBoundary(boundary);
+						TarInputStream tar = new TarInputStream(in);
+						TarEntry entry = tar.getNextEntry();
+						while(entry != null) {
+							Log.d(TAG, "Found " + entry.getName() + " of " + entry.getSize() + " bytes");
+							entry = tar.getNextEntry();
+						}
+						tar.close();
 						skipped = in.skip(10000000);
 						Log.d(TAG, "skipped " + skipped + " to find third boundary");
 						// process headers

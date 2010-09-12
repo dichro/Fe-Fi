@@ -7,17 +7,9 @@ import android.util.Log;
 import android.util.Xml;
 
 public class GetPhotoStatus extends EyefiMessage {
-	private static final String CREDENTIAL = "credential";
-	private static final String MACADDRESS = "macaddress";
 	public static final String TAG = "GetPhotoStatus";
 	public void parse(InputStream is) {
 		setupParser("GetPhotoStatus");
-		setupParameter(CREDENTIAL);
-		setupParameter(MACADDRESS);
-		setupParameter("filename");
-		setupParameter("filesize");
-		setupParameter("filesignature");
-		setupParameter("flags");
 		
 		try {
 			Xml.parse(is, Xml.Encoding.UTF_8, soapEnvelope.getContentHandler());

@@ -5,7 +5,6 @@ import java.util.HashMap;
 import android.sax.Element;
 import android.sax.EndTextElementListener;
 import android.sax.RootElement;
-import android.util.Log;
 
 public class EyefiMessage {
 
@@ -36,6 +35,12 @@ public class EyefiMessage {
 	protected HashMap<String, String> contents = new HashMap<String, String>();
 	protected Element op;
 	protected RootElement soapEnvelope;
+	protected static final String CREDENTIAL = "credential";
+	protected static final String FILENAME = "filename";
+	protected static final String FILESIGNATURE = "filesignature";
+	protected static final String FILESIZE = "filesize";
+	protected static final String FLAGS = "flags";
+	protected static final String MACADDRESS = "macaddress";
 
 	void setupParameter(String parameter) {		
 		op.getChild(parameter).setEndTextElementListener(new ContentSnatcher(parameter));		
@@ -46,6 +51,12 @@ public class EyefiMessage {
 		String eyefiNs = "EyeFi/SOAP/EyeFilm";
 		soapEnvelope = new RootElement(soapNs, "Envelope");
 		op = soapEnvelope.getChild(soapNs, "Body").getChild(eyefiNs, eyefiOperation);
+		setupParameter(CREDENTIAL);
+		setupParameter(MACADDRESS);
+		setupParameter(FILENAME);
+		setupParameter(FILESIZE);
+		setupParameter(FILESIGNATURE);
+		setupParameter(FLAGS);
 	}
 
 	public String getParameter(String parameter) {
