@@ -4,8 +4,11 @@ import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.http.Header;
 import org.apache.http.HeaderElement;
@@ -14,6 +17,7 @@ import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpServerConnection;
+import org.apache.http.client.methods.HttpHead;
 import org.apache.http.impl.DefaultHttpServerConnection;
 import org.apache.http.message.BufferedHeader;
 import org.apache.http.params.BasicHttpParams;
@@ -21,22 +25,29 @@ import org.apache.http.util.CharArrayBuffer;
 import org.apache.tools.tar.TarEntry;
 import org.apache.tools.tar.TarInputStream;
 
+import to.rcpt.fefi.eyefi.EyefiMessage;
 import to.rcpt.fefi.eyefi.GetPhotoStatus;
 import to.rcpt.fefi.eyefi.GetPhotoStatusResponse;
 import to.rcpt.fefi.eyefi.StartSession;
 import to.rcpt.fefi.eyefi.StartSessionResponse;
 import to.rcpt.fefi.eyefi.UploadPhoto;
+import to.rcpt.fefi.eyefi.UploadPhotoResponse;
 import to.rcpt.fefi.util.MultipartInputStream;
 
 import android.app.Activity;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.database.Cursor;
 import android.provider.BaseColumns;
 import android.provider.MediaStore.Images;
+import android.provider.MediaStore.MediaColumns;
+import android.provider.MediaStore.Images.Media;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 
 public class FeFi extends Activity implements Runnable {
+	private static final String CONTENT_DISPOSITION_PREAMBLE = "form-data; name=\"";
 	private static final String serverNonce = "deadbeef";
 	private static final String URN_STARTSESSION = "\"urn:StartSession\"";
 	private static final String URN_GETPHOTOSTATUS = "\"urn:GetPhotoStatus\"";
@@ -83,17 +94,13 @@ public class FeFi extends Activity implements Runnable {
 		GetPhotoStatus photoStatus = new GetPhotoStatus();
 		photoStatus.parse(eyefiRequest.getEntity().getContent());
 		photoStatus.authenticate(uploadKey, serverNonce);
-		String imageName = "eyefi/" + photoStatus.getParameter("filesignature");
-		Log.d(TAG, "searching for " + imageName);
-		ContentResolver cr = getContentResolver();
-		String[] columns = { BaseColumns._ID };
-		String filter = Images.Media.DISPLAY_NAME + " = ? ";
-		String placeholders[] = { imageName };
-		Cursor results = cr.query(Images.Media.EXTERNAL_CONTENT_URI, columns,
-				filter, placeholders, null);
+		Cursor results = getCursor(photoStatus.getParameter("filesignature"));
+		int offset = 0;
 		boolean imageExists = results.moveToFirst();
+		if(imageExists)
+			offset = results.getInt(results.getColumnIndex(MediaColumns.SIZE));
 		results.close();
-		Log.d(TAG, "existence: " + imageExists);
+		Log.d(TAG, "existence: " + imageExists + "; offset " + offset);
 		// TODO: how to reject an image? offset presumably resumes upload;
 		// what's the point of fileid? oh - returned by client in upload
 		GetPhotoStatusResponse gpsr = new GetPhotoStatusResponse(photoStatus,
@@ -102,6 +109,134 @@ public class FeFi extends Activity implements Runnable {
 		conn.sendResponseEntity(gpsr);
 	}
 
+	private Cursor getCursor(String signature) {
+		String imageName = "eyefi/" + signature;
+		Log.d(TAG, "searching for " + imageName);
+		ContentResolver cr = getContentResolver();
+		String[] columns = { BaseColumns._ID, MediaColumns.SIZE };
+		String filter = Images.Media.DISPLAY_NAME + " = ? ";
+		String placeholders[] = { imageName };
+		Cursor results = cr.query(Images.Media.EXTERNAL_CONTENT_URI, columns,
+				filter, placeholders, null);
+		return results;
+	}
+
+	public Map<String, String> getHeaders(MultipartInputStream in, String boundary) 
+			throws IOException {
+		Map<String, String> headers = new HashMap<String, String>();
+		in.setBoundary("\r\n\r\n");
+		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+		String line = reader.readLine();
+		while(line != null) {
+			int pos = line.indexOf(": ");
+			if(pos > 0)
+				headers.put(line.substring(0, pos), line.substring(pos + 2));
+			line = reader.readLine();
+		}
+		in.setBoundary(boundary);
+		return headers;
+	}
+	
+	public void uploadPhoto(HttpServerConnection conn, HttpRequest request) 
+			throws HttpException, IOException {
+		Log.d(TAG, "upload " + request.toString());
+		HttpEntityEnclosingRequest eyefiRequest = (HttpEntityEnclosingRequest) request;
+		Header contentTypes[] = eyefiRequest.getHeaders("Content-type");
+		if((contentTypes == null) || contentTypes.length < 1) {
+			Log.e(TAG, "no content type in upload request");
+			conn.close();
+		}
+		HeaderElement elements[] = contentTypes[0].getElements();
+		if((elements == null) || elements.length < 1) {
+			Log.e(TAG, "bad content type in upload request");
+			conn.close();
+		}
+		if(!elements[0].getName().equals("multipart/form-data")) {
+			Log.e(TAG, "content-type not multipart/form-data in upload");
+			conn.close();
+		}
+		// for some reason, we don't get an element with the boundary. find it manually.
+		String b = "boundary=";
+		String value = contentTypes[0].getValue();
+		int pos = value.indexOf(b);
+		if(pos < 0) {
+			Log.e(TAG, "no boundary in content-type");
+			conn.close();
+		}
+		String boundary = "--" + value.substring(pos + b.length()) + "\r\n";
+		Log.d(TAG, "identified boundary " + boundary);
+		// okay, ready to start reading data
+		conn.receiveRequestEntity(eyefiRequest);
+		HttpEntity entity = eyefiRequest.getEntity();
+		Log.d(TAG, "entity " + entity + " len " + entity.getContentLength());
+		MultipartInputStream in = new MultipartInputStream(
+				new BufferedInputStream(entity.getContent()), boundary);
+		Log.d(TAG, "made in " + in);
+		// find first boundary; should be at start
+		in.close();
+		Map<String, String> headers = getHeaders(in, boundary);
+		UploadPhoto uploadPhoto = null;
+		while(!headers.isEmpty()) {
+			String contentDisposition = headers.get("Content-Disposition");
+			if(contentDisposition == null)
+				break;
+			if(!contentDisposition.startsWith(CONTENT_DISPOSITION_PREAMBLE))
+				break;
+			int endPos = contentDisposition.indexOf('"', CONTENT_DISPOSITION_PREAMBLE.length());
+			if(endPos < 0)
+				break;
+			String partName = contentDisposition.substring(CONTENT_DISPOSITION_PREAMBLE.length(), endPos);
+			if(partName.equals("SOAPENVELOPE")) {
+				UploadPhoto u = new UploadPhoto();
+				u.parse(in);
+				uploadPhoto = u;
+			} else if(partName.equals("FILENAME")) {
+				TarInputStream tarball = new TarInputStream(in);
+				TarEntry file = tarball.getNextEntry();
+				while(file != null) {
+					String fileName = file.getName();
+					if(fileName.endsWith(".log")) {
+						Log.d(TAG, "Found logfile " + fileName + ", ignoring... for now!");
+					} else {
+						Log.d(TAG, "Processing image file " + fileName);
+						if(uploadPhoto == null)
+							break;
+						Cursor results = getCursor(uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE));
+						boolean fileExists = results.moveToFirst();
+						results.close();
+						if(!fileExists) {
+							ContentValues values = new ContentValues();
+							values.put(Media.DISPLAY_NAME, "eyefi/" + uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE));
+							values.put(Media.BUCKET_DISPLAY_NAME, "bucket display?");
+							values.put(Media.DESCRIPTION, "description");
+							values.put(Media.TITLE, "title");
+							values.put(Media.MIME_TYPE, "image/jpeg");
+							values.put(MediaColumns.SIZE, (int)file.getSize());
+							ContentResolver cr = getContentResolver();
+							Uri uri = cr.insert(Media.EXTERNAL_CONTENT_URI, values);
+							try {
+								OutputStream out = cr.openOutputStream(uri);
+								Log.d(TAG, "shuffling image to " + uri);
+								tarball.copyEntryContents(out);
+								out.close();
+								Log.d(TAG, "done with " + uri);
+							} catch(IOException e) {
+								Log.e(TAG, "IO fail " + e);
+							}
+						} else
+							Log.e(TAG, "file exists!");
+					}
+					file = tarball.getNextEntry();
+				}
+			}
+			in.close();
+			headers = getHeaders(in, boundary);
+		}
+		UploadPhotoResponse response = new UploadPhotoResponse(false);
+		conn.sendResponseHeader(response);
+		conn.sendResponseEntity(response);
+	}
+	
 	public void run() {
 		Log.e(TAG, "run()");
 		uploadKey = "a8378747b56aa0c49d608bec38b159e8";
@@ -133,91 +268,7 @@ public class FeFi extends Activity implements Runnable {
 							}
 						}
 					} else if(uri.equals("/api/soap/eyefilm/v1/upload")) {
-						Log.d(TAG, "upload " + request.toString());
-						HttpEntityEnclosingRequest eyefiRequest = (HttpEntityEnclosingRequest) request;
-						Header contentTypes[] = eyefiRequest.getHeaders("Content-type");
-						if((contentTypes == null) || contentTypes.length < 1) {
-							Log.e(TAG, "no content type in upload request");
-							conn.close();
-						}
-						Log.d(TAG, "contentTypes: " + contentTypes.length);
-						Log.d(TAG, "content-type " + contentTypes[0].getValue());
-						HeaderElement elements[] = contentTypes[0].getElements();
-						Log.d(TAG, "elements: " + elements.length);
-						if((elements == null) || elements.length < 1) {
-							Log.e(TAG, "bad content type in upload request");
-							conn.close();
-						}
-						if(!elements[0].getName().equals("multipart/form-data")) {
-							Log.e(TAG, "content-type not multipart/form-data in upload");
-							conn.close();
-						}
-						// for some reason, we don't get an element with the boundary. find it manually.
-						String b = "boundary=";
-						String value = contentTypes[0].getValue();
-						int pos = value.indexOf(b);
-						if(pos < 0) {
-							Log.e(TAG, "no boundary in content-type");
-							conn.close();
-						}
-						String boundary = "--" + value.substring(pos + b.length()) + "\r\n";
-						Log.d(TAG, "identified boundary " + boundary);
-						// okay, ready to start reading data
-						conn.receiveRequestEntity(eyefiRequest);
-						HttpEntity entity = eyefiRequest.getEntity();
-						Log.d(TAG, "entity " + entity + " len " + entity.getContentLength());
-						MultipartInputStream in = new MultipartInputStream(
-								new BufferedInputStream(entity.getContent()), boundary);
-						Log.d(TAG, "made in " + in);
-						// find first boundary; should be at start
-						long skipped = in.skip(10000);
-						Log.d(TAG, "skipped " + skipped + " to find first boundary");
-						// process headers
-						in.setBoundary("\r\n\r\n");
-						BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-						String line = reader.readLine();
-						while(line != null) {
-							Log.d(TAG, "read header " + line);
-							line = reader.readLine();
-						}
-						// check we got a SOAPENVELOPE
-						in.setBoundary(boundary);
-						UploadPhoto up = new UploadPhoto();
-						up.parse(in);
-						skipped = in.skip(1000);
-						Log.d(TAG, "parsed uploadphoto skipped " + skipped + " to find second boundary");
-						// process headers
-						in.setBoundary("\r\n\r\n");
-						reader = new BufferedReader(new InputStreamReader(in));
-						line = reader.readLine();
-						while(line != null) {
-							Log.d(TAG, "read header " + line);
-							line = reader.readLine();
-						}
-						// confirm we're looking at the tar file
-						in.setBoundary(boundary);
-						TarInputStream tar = new TarInputStream(in);
-						TarEntry entry = tar.getNextEntry();
-						while(entry != null) {
-							Log.d(TAG, "Found " + entry.getName() + " of " + entry.getSize() + " bytes");
-							entry = tar.getNextEntry();
-						}
-						tar.close();
-						skipped = in.skip(10000000);
-						Log.d(TAG, "skipped " + skipped + " to find third boundary");
-						// process headers
-						in.setBoundary("\r\n\r\n");
-						reader = new BufferedReader(new InputStreamReader(in));
-						line = reader.readLine();
-						while(line != null) {
-							Log.d(TAG, "read header " + line);
-							line = reader.readLine();
-						}
-						// more stupid code here
-						String line2 = ""; // read from inputstream
-						CharArrayBuffer headerLine = new CharArrayBuffer(line2.length());
-						headerLine.append(line2);
-						BufferedHeader header = new BufferedHeader(headerLine);
+						uploadPhoto(conn, request);
 					} else {
 						Log.e(TAG, "unknown method " + uri);
 					}

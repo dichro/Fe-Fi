@@ -35,12 +35,12 @@ public class EyefiMessage {
 	protected HashMap<String, String> contents = new HashMap<String, String>();
 	protected Element op;
 	protected RootElement soapEnvelope;
-	protected static final String CREDENTIAL = "credential";
-	protected static final String FILENAME = "filename";
-	protected static final String FILESIGNATURE = "filesignature";
-	protected static final String FILESIZE = "filesize";
-	protected static final String FLAGS = "flags";
-	protected static final String MACADDRESS = "macaddress";
+	public static final String CREDENTIAL = "credential";
+	public static final String FILENAME = "filename";
+	public static final String FILESIGNATURE = "filesignature";
+	public static final String FILESIZE = "filesize";
+	public static final String FLAGS = "flags";
+	public static final String MACADDRESS = "macaddress";
 
 	void setupParameter(String parameter) {		
 		op.getChild(parameter).setEndTextElementListener(new ContentSnatcher(parameter));		
