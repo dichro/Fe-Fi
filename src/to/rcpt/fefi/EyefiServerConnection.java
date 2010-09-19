@@ -2,9 +2,11 @@ package to.rcpt.fefi;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.StringWriter;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
@@ -69,17 +71,25 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		GetPhotoStatus photoStatus = new GetPhotoStatus();
 		photoStatus.parse(eyefiRequest.getEntity().getContent());
 		photoStatus.authenticate(uploadKey, serverNonce);
-		Cursor results = getCursor(photoStatus.getParameter("filesignature"));
 		int offset = 0;
-		boolean imageExists = results.moveToFirst();
-		if(imageExists)
-			offset = results.getInt(results.getColumnIndex(MediaColumns.SIZE));
-		results.close();
-		Log.d(TAG, "existence: " + imageExists + "; offset " + offset);
+		String filesignature = photoStatus.getParameter("filesignature");
+		DBAdapter db = DBAdapter.make(context);
+		if(db.imageExists(filesignature)) {
+			Log.i(TAG, "image " + filesignature + "exists");
+			offset = -1;
+		} else
+			Log.i(TAG, "new image " + filesignature);
+		db.close();
+//		Cursor results = getCursor(photoStatus.getParameter("filesignature"));
+//		boolean imageExists = results.moveToFirst();
+//		if(imageExists)
+//			offset = results.getInt(results.getColumnIndex(MediaColumns.SIZE));
+//		results.close();
+//		Log.d(TAG, "existence: " + imageExists + "; offset " + offset);
 		// TODO: how to reject an image? offset presumably resumes upload;
 		// what's the point of fileid? oh - returned by client in upload
 		GetPhotoStatusResponse gpsr = new GetPhotoStatusResponse(photoStatus,
-				1, 0);
+				1, offset);
 		sendResponseHeader(gpsr);
 		sendResponseEntity(gpsr);
 	}
@@ -184,6 +194,9 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		in.close();
 		Map<String, String> headers = getHeaders(in, boundary);
 		UploadPhoto uploadPhoto = null;
+		Uri uri = null;
+		String log = null;
+		String fileSignature = null;
 		while(!headers.isEmpty()) {
 			String contentDisposition = headers.get("Content-Disposition");
 			if(contentDisposition == null)
@@ -204,24 +217,32 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				while(file != null) {
 					String fileName = file.getName();
 					if(fileName.endsWith(".log")) {
-						Log.d(TAG, "Found logfile " + fileName + ", ignoring... for now!");
+						Log.d(TAG, "Found logfile " + fileName);
+						StringWriter sw = new StringWriter(10000);
+						ByteArrayOutputStream out = new ByteArrayOutputStream();
+						tarball.copyEntryContents(out);
+						log = out.toString();
 					} else {
 						Log.d(TAG, "Processing image file " + fileName);
 						if(uploadPhoto == null)
 							break;
-						Cursor results = getCursor(uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE));
-						boolean fileExists = results.moveToFirst();
-						results.close();
+						DBAdapter db = DBAdapter.make(context);
+						fileSignature = uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE);
+						boolean fileExists = db.imageExists(fileSignature);
+						db.close();
+//						Cursor results = getCursor(uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE));
+//						boolean fileExists = results.moveToFirst();
+//						results.close();
 						if(!fileExists) {
 							ContentValues values = new ContentValues();
-							values.put(Media.DISPLAY_NAME, "eyefi/" + uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE));
+							values.put(Media.DISPLAY_NAME, "eyefi/" + fileSignature);
 							values.put(Media.BUCKET_DISPLAY_NAME, "bucket display?");
 							values.put(Media.DESCRIPTION, "description");
 							values.put(Media.TITLE, "title");
 							values.put(Media.MIME_TYPE, "image/jpeg");
 							values.put(MediaColumns.SIZE, (int)file.getSize());
 							ContentResolver cr = context.getContentResolver();
-							Uri uri = cr.insert(Media.EXTERNAL_CONTENT_URI, values);
+							uri = cr.insert(Media.EXTERNAL_CONTENT_URI, values);
 							try {
 								OutputStream out = cr.openOutputStream(uri);
 								Log.d(TAG, "shuffling image to " + uri);
@@ -239,6 +260,12 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			}
 			in.close();
 			headers = getHeaders(in, boundary);
+		}
+		if(uri != null) {
+			// we saved something; we should track it
+			DBAdapter db = DBAdapter.make(context);
+			db.addImage(fileSignature, uri, log);
+			db.close();
 		}
 		UploadPhotoResponse response = new UploadPhotoResponse(false);
 		sendResponseHeader(response);

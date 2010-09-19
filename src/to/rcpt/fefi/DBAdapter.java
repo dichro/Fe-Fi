@@ -5,6 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.net.Uri;
 import android.util.Log;
 
 public class DBAdapter extends SQLiteOpenHelper {
@@ -53,13 +54,14 @@ public class DBAdapter extends SQLiteOpenHelper {
 				new String[] { fileSignature }, null, null, null);
 		boolean ret = c.moveToFirst();
 		Log.d(TAG, "imageExists " + fileSignature + " = " + ret);
+		c.close();
 		return ret;
 	}
 	
-	public void addImage(String fileSignature, String imageUri, String log) {
+	public void addImage(String fileSignature, Uri imageUri, String log) {
 		ContentValues cv = new ContentValues();
 		cv.put("fileSignature", fileSignature);
-		cv.put("imageUri", imageUri);
+		cv.put("imageUri", imageUri.toString());
 		cv.put("log", log);
 		Log.d(TAG, "adding image " + fileSignature + " with URI " + imageUri);
 		dbh.insertOrThrow("uploads", null, cv);

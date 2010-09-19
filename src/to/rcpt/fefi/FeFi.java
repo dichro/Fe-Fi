@@ -18,10 +18,8 @@ public class FeFi extends Activity implements Runnable {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
-		Log.e(TAG, "bar2");
 		try {
 			eyefiSocket = new ServerSocket(59278);
-			Log.e(TAG, "bar");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -29,12 +27,10 @@ public class FeFi extends Activity implements Runnable {
 	}
 
 	public void run() {
-		Log.e(TAG, "run()");
-		
 		while (true) {
 			try {
 				Socket eyefiClient = eyefiSocket.accept();
-				Log.e(TAG, "socket!");
+				Log.i(TAG, "connection from " + eyefiClient.getRemoteSocketAddress());
 				EyefiServerConnection esc = EyefiServerConnection.makeConnection(this, eyefiClient);
 				new Thread(esc).start();
 			} catch (IOException e) {
