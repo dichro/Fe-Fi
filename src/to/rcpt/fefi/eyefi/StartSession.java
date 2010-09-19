@@ -84,8 +84,8 @@ public class StartSession extends EyefiMessage {
 		return ss;
 	}
 	
-	String calculateCredential(String uploadKey) {
-		String credential_hex = getMacaddress() + getCnonce() + uploadKey;
+	String calculateCredential(byte[] uploadKey) {
+		String credential_hex = getMacaddress() + getCnonce() + toHexString(uploadKey);
 		Log.d(TAG, "parsing " + credential_hex);
 		int credentialLength = credential_hex.length() / 2;
 		byte credential[] = new byte[credentialLength];

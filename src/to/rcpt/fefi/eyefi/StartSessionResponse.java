@@ -5,7 +5,7 @@ import java.io.UnsupportedEncodingException;
 import org.apache.http.entity.StringEntity;
 
 public class StartSessionResponse extends EyefiResponse {
-	public StartSessionResponse(StartSession ss, String uploadKey,
+	public StartSessionResponse(StartSession ss, byte[] uploadKey,
 			String serverNonce) {
 		super();
 		try {

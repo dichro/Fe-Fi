@@ -18,8 +18,8 @@ public class GetPhotoStatus extends EyefiMessage {
 		}
 	}
 	
-	public void authenticate(String uploadKey, String serverNonce) {
-		String credential_hex = getParameter(MACADDRESS) + uploadKey + serverNonce;
+	public void authenticate(byte[] uploadKey, String serverNonce) {
+		String credential_hex = getParameter(MACADDRESS) + toHexString(uploadKey) + serverNonce;
 		Log.d(TAG, "parsing " + credential_hex);
 		int credentialLength = credential_hex.length() / 2;
 		byte credential[] = new byte[credentialLength];
@@ -37,8 +37,9 @@ public class GetPhotoStatus extends EyefiMessage {
 			throw new RuntimeException(e);
 		}
 		Log.d(TAG, "calculated credential string " + s);
-		Log.d(TAG, "supplied credential string " + getParameter(CREDENTIAL));
-		if(!s.equals(getParameter(CREDENTIAL)))
+		String suppliedCredential = getParameter(CREDENTIAL);
+		Log.d(TAG, "supplied credential string " + suppliedCredential);
+		if(!s.equals(suppliedCredential))
 //			throw new RuntimeException(); // TODO: make a better exception
 			Log.e(TAG, "FAIL!");
 			// TODO: FIX authentication!

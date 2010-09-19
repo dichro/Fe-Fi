@@ -6,10 +6,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.StringWriter;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.zip.Adler32;
+import java.util.zip.CheckedInputStream;
 
 import org.apache.http.Header;
 import org.apache.http.HeaderElement;
@@ -22,6 +23,7 @@ import org.apache.http.params.BasicHttpParams;
 import org.apache.tools.tar.TarEntry;
 import org.apache.tools.tar.TarInputStream;
 
+import to.rcpt.fefi.eyefi.EyefiIntegrityDigest;
 import to.rcpt.fefi.eyefi.EyefiMessage;
 import to.rcpt.fefi.eyefi.GetPhotoStatus;
 import to.rcpt.fefi.eyefi.GetPhotoStatusResponse;
@@ -43,7 +45,7 @@ import android.util.Log;
 
 public class EyefiServerConnection extends DefaultHttpServerConnection implements Runnable {
 	public static final String TAG = "EyefiServerConnection";
-	private String uploadKey;
+	private byte[] uploadKey;
 	private static final String serverNonce = "deadbeefdeadbeefdeadbeefdeadbeef";
 	private Context context;
 	private static final String CONTENT_DISPOSITION_PREAMBLE = "form-data; name=\"";
@@ -58,7 +60,13 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	
 	protected EyefiServerConnection(Context c) {
 		context = c;
-		uploadKey = "a8378747b56aa0c49d608bec38b159e8";
+		String key = "a8378747b56aa0c49d608bec38b159e8";
+		int uploadKeyLength = key.length() / 2;
+		uploadKey = new byte[uploadKeyLength];
+		for(int i = 0; i < uploadKeyLength; ++i) {
+			String hexpair = key.substring(2 * i, 2 * i + 2);
+			uploadKey[i] = (byte)(Integer.parseInt(hexpair, 16) & 0xff);
+		}
 	}
 	
 	public void getPhotoStatus(HttpRequest request)
@@ -149,7 +157,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		receiveRequestEntity(eyefiRequest);
 		StartSession ss = StartSession.parse(eyefiRequest.getEntity()
 				.getContent());
-		StartSessionResponse ssr = new StartSessionResponse(ss, this.uploadKey,
+		StartSessionResponse ssr = new StartSessionResponse(ss, uploadKey,
 				serverNonce);
 		sendResponseHeader(ssr);
 		sendResponseEntity(ssr);
@@ -212,7 +220,9 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				u.parse(in);
 				uploadPhoto = u;
 			} else if(partName.equals("FILENAME")) {
-				TarInputStream tarball = new TarInputStream(in);
+				EyefiIntegrityDigest checksum = new EyefiIntegrityDigest();
+				TarInputStream tarball = new TarInputStream(new CheckedInputStream(in, checksum));
+//				TarInputStream tarball = new TarInputStream(in);
 				TarEntry file = tarball.getNextEntry();
 				while(file != null) {
 					String fileName = file.getName();
@@ -256,6 +266,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 					}
 					file = tarball.getNextEntry();
 				}
+				byte[] integrityDigest = checksum.getValue(uploadKey);
+				Log.d(TAG, "calculated digest " + EyefiMessage.toHexString(integrityDigest));
 			}
 			in.close();
 			headers = getHeaders(in, boundary);
@@ -283,7 +295,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				headers.put(line.substring(0, pos), line.substring(pos + 2));
 			line = reader.readLine();
 		}
-		in.setBoundary(boundary);
+		in.setBoundary("\r\n" + boundary);
 		return headers;
 	}
 
