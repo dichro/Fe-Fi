@@ -23,13 +23,11 @@ public class GetPhotoStatus extends EyefiMessage {
 		Log.d(TAG, "parsing " + credential_hex);
 		int credentialLength = credential_hex.length() / 2;
 		byte credential[] = new byte[credentialLength];
-		Log.d(TAG, "bar");
 		for(int i = 0; i < credentialLength; ++i) {
 			String hexpair = credential_hex.substring(2 * i, 2 * i + 2);
 			credential[i] = (byte)(Integer.parseInt(hexpair, 16) & 0xff);
 		}
-		Log.d(TAG, "foo");
-		Log.d(TAG, "parsed " + toHexString(credential));
+		Log.d(TAG, "parsed  " + toHexString(credential));
 		StringBuffer s;
 		try {
 			MessageDigest md = MessageDigest.getInstance("MD5");

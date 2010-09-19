@@ -44,7 +44,7 @@ import android.util.Log;
 public class EyefiServerConnection extends DefaultHttpServerConnection implements Runnable {
 	public static final String TAG = "EyefiServerConnection";
 	private String uploadKey;
-	private static final String serverNonce = "deadbeef";
+	private static final String serverNonce = "deadbeefdeadbeefdeadbeefdeadbeef";
 	private Context context;
 	private static final String CONTENT_DISPOSITION_PREAMBLE = "form-data; name=\"";
 	private static final String URN_GETPHOTOSTATUS = "\"urn:GetPhotoStatus\"";
@@ -218,7 +218,6 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 					String fileName = file.getName();
 					if(fileName.endsWith(".log")) {
 						Log.d(TAG, "Found logfile " + fileName);
-						StringWriter sw = new StringWriter(10000);
 						ByteArrayOutputStream out = new ByteArrayOutputStream();
 						tarball.copyEntryContents(out);
 						log = out.toString();
