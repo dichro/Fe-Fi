@@ -15,7 +15,6 @@ public class EyefiIntegrityDigest implements Checksum {
 	public static final String TAG = "EyefiIntegrityDigest"; 
 
 	public byte[] getValue(byte[] uploadKey) {
-		Log.d(TAG, "getValue " + bytesCounted);
 		if(bytesCounted > 0)
 			completeBlock();
 		int numBlocks = blockChecksums.size();
@@ -24,19 +23,7 @@ public class EyefiIntegrityDigest implements Checksum {
 			plaintext[2 * i] =  (byte)(blockChecksums.get(i) >> 8);
 			plaintext[2 * i + 1] = (byte)(blockChecksums.get(i) & 0xff);
 		}
-		Log.d(TAG, "total plaintext length " + plaintext.length);
 		System.arraycopy(uploadKey, 0, plaintext, numBlocks * 2, uploadKey.length);
-		byte start[] = new byte[40];
-		int i = 0;
-		for(; i < plaintext.length - 39; i += 40) {
-			System.arraycopy(plaintext, i, start, 0, 40);
-			Log.d(TAG, "plaintext@" + i + ": " + EyefiMessage.toHexString(start));
-		}
-		if(i != plaintext.length) {
-			start = new byte[plaintext.length - i];
-			System.arraycopy(plaintext, i, start, 0, plaintext.length - i);
-			Log.d(TAG, "plaintext@" + i + ": " + EyefiMessage.toHexString(start));			
-		}
 		try {
 			MessageDigest md = MessageDigest.getInstance("MD5");
 			byte[] authentication = md.digest(plaintext);
@@ -68,8 +55,6 @@ public class EyefiIntegrityDigest implements Checksum {
 		int sum16 = counterValue;
 		while((sum16 & ~0xffff) != 0)
 			sum16 = (sum16 & 0xffff) + (sum16 >> 16);
-//		int sum16 = ~((counterValue & 0xffff) + ((counterValue >> 16) & 0xffff)) & 0xffff;
-//		Log.d(TAG, "block checksum " + Integer.toHexString(sum16));
 		blockChecksums.add(~sum16);
 		counterValue = 0;
 		bytesCounted = 0;
