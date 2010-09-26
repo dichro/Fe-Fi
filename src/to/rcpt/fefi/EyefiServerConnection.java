@@ -9,7 +9,6 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.zip.Adler32;
 import java.util.zip.CheckedInputStream;
 
 import org.apache.http.Header;
