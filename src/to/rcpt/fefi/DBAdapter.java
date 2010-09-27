@@ -66,4 +66,19 @@ public class DBAdapter extends SQLiteOpenHelper {
 		Log.d(TAG, "adding image " + fileSignature + " with URI " + imageUri);
 		dbh.insertOrThrow("uploads", null, cv);
 	}
+	
+	public byte[] getUploadKeyForMac(String mac) {
+		Cursor c = dbh.query("cameras", new String[] { "uploadKey" }, "macAddress = ?", new String[] { mac }, null, null, null);
+		try {
+			if(!c.moveToFirst()) {
+				c.close();
+				// TODO: throw something
+				return null;
+			}
+			byte[] uploadKey = c.getBlob(c.getColumnIndex("uploadKey"));
+			return uploadKey;
+		} finally {
+			c.close();
+		}
+	}
 }

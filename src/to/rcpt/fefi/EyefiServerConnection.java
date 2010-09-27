@@ -46,18 +46,18 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	public static final String TAG = "EyefiServerConnection";
 	private byte[] uploadKey;
 	private static final String serverNonce = "deadbeefdeadbeefdeadbeefdeadbeef";
-	private Context context;
+	private FeFi context;
 	private static final String CONTENT_DISPOSITION_PREAMBLE = "form-data; name=\"";
 	private static final String URN_GETPHOTOSTATUS = "\"urn:GetPhotoStatus\"";
 	private static final String URN_STARTSESSION = "\"urn:StartSession\"";
 	
-	public static EyefiServerConnection makeConnection(Context c, Socket s) throws IOException {
+	public static EyefiServerConnection makeConnection(FeFi c, Socket s) throws IOException {
 		EyefiServerConnection me = new EyefiServerConnection(c);
 		me.bind(s, new BasicHttpParams());
 		return me;
 	}
 	
-	protected EyefiServerConnection(Context c) {
+	protected EyefiServerConnection(FeFi c) {
 		context = c;
 		String key = "a8378747b56aa0c49d608bec38b159e8";
 		int uploadKeyLength = key.length() / 2;
@@ -156,6 +156,20 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		receiveRequestEntity(eyefiRequest);
 		StartSession ss = StartSession.parse(eyefiRequest.getEntity()
 				.getContent());
+		Log.d(TAG, "parsed startsession");
+		DBAdapter db = DBAdapter.make(context);
+		Log.d(TAG, "opened DB");
+		String mac;
+		try {
+			mac = ss.getMacaddress();
+			uploadKey = db.getUploadKeyForMac(mac);
+		} finally {
+			db.close();
+		}
+		if(uploadKey == null) {
+			context.addUnknownMac(mac);
+			close();
+		}
 		StartSessionResponse ssr = new StartSessionResponse(ss, uploadKey,
 				serverNonce);
 		sendResponseHeader(ssr);

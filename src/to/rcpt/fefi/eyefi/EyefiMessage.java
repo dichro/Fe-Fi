@@ -5,9 +5,10 @@ import java.util.HashMap;
 import android.sax.Element;
 import android.sax.EndTextElementListener;
 import android.sax.RootElement;
+import android.util.Log;
 
 public class EyefiMessage {
-
+	private static String TAG = "EyefiMessage";
 
 	class ContentSnatcher implements EndTextElementListener {
 		String key;
@@ -61,8 +62,10 @@ public class EyefiMessage {
 
 	public String getParameter(String parameter) {
 		String value = contents.get(parameter);
-		if(value == null)
+		if(value == null) {
+			Log.d(TAG, "no " + parameter + " found in xml");
 			throw new RuntimeException(); // TODO: make a useful exception
+		}
 		return value;
 	}
 
