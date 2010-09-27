@@ -1,5 +1,6 @@
 package to.rcpt.fefi;
 
+import to.rcpt.fefi.eyefi.Types.UploadKey;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -67,7 +68,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 		dbh.insertOrThrow("uploads", null, cv);
 	}
 	
-	public byte[] getUploadKeyForMac(String mac) {
+	public UploadKey getUploadKeyForMac(String mac) {
 		Cursor c = dbh.query("cameras", new String[] { "uploadKey" }, "macAddress = ?", new String[] { mac }, null, null, null);
 		try {
 			if(!c.moveToFirst()) {
@@ -76,7 +77,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 				return null;
 			}
 			byte[] uploadKey = c.getBlob(c.getColumnIndex("uploadKey"));
-			return uploadKey;
+			return new UploadKey(uploadKey);
 		} finally {
 			c.close();
 		}

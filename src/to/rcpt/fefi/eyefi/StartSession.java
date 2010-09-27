@@ -3,6 +3,10 @@ package to.rcpt.fefi.eyefi;
 import java.io.InputStream;
 import java.security.MessageDigest;
 
+import to.rcpt.fefi.eyefi.Types.ServerNonce;
+import to.rcpt.fefi.eyefi.Types.UploadKey;
+import to.rcpt.fefi.util.Hexstring;
+
 import android.sax.Element;
 import android.sax.EndTextElementListener;
 import android.sax.RootElement;
@@ -84,21 +88,16 @@ public class StartSession extends EyefiMessage {
 		return ss;
 	}
 	
-	String calculateCredential(byte[] uploadKey) {
-		String credential_hex = getMacaddress() + getCnonce() + toHexString(uploadKey);
+	ServerNonce calculateCredential(UploadKey uploadKey) {
+		String credential_hex = getMacaddress() + getCnonce() + uploadKey;
 		Log.d(TAG, "parsing " + credential_hex);
-		int credentialLength = credential_hex.length() / 2;
-		byte credential[] = new byte[credentialLength];
-		for(int i = 0; i < credentialLength; ++i) {
-			String hexpair = credential_hex.substring(2 * i, 2 * i + 2);
-			credential[i] = (byte)(Integer.parseInt(hexpair, 16) & 0xff);
-		}
-		Log.d(TAG, "parsed " + toHexString(credential));
+		Hexstring credential = new Hexstring(credential_hex);
+		Log.d(TAG, "parsed " + credential);
 		try {
 			MessageDigest md = MessageDigest.getInstance("MD5");
-			byte[] authentication = md.digest(credential);
-			StringBuffer s = toHexString(authentication);
-			return s.toString();
+			byte[] authentication = md.digest(credential.toBytes());
+			ServerNonce c = new ServerNonce(authentication);
+			return c;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}

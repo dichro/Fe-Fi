@@ -30,6 +30,9 @@ import to.rcpt.fefi.eyefi.StartSession;
 import to.rcpt.fefi.eyefi.StartSessionResponse;
 import to.rcpt.fefi.eyefi.UploadPhoto;
 import to.rcpt.fefi.eyefi.UploadPhotoResponse;
+import to.rcpt.fefi.eyefi.Types.ServerNonce;
+import to.rcpt.fefi.eyefi.Types.UploadKey;
+import to.rcpt.fefi.util.Hexstring;
 import to.rcpt.fefi.util.MultipartInputStream;
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -44,8 +47,8 @@ import android.util.Log;
 
 public class EyefiServerConnection extends DefaultHttpServerConnection implements Runnable {
 	public static final String TAG = "EyefiServerConnection";
-	private byte[] uploadKey;
-	private static final String serverNonce = "deadbeefdeadbeefdeadbeefdeadbeef";
+	private UploadKey uploadKey = null;
+	private static final ServerNonce serverNonce = new ServerNonce("deadbeefdeadbeefdeadbeefdeadbeef");
 	private FeFi context;
 	private static final String CONTENT_DISPOSITION_PREAMBLE = "form-data; name=\"";
 	private static final String URN_GETPHOTOSTATUS = "\"urn:GetPhotoStatus\"";
@@ -59,13 +62,14 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	
 	protected EyefiServerConnection(FeFi c) {
 		context = c;
-		String key = "a8378747b56aa0c49d608bec38b159e8";
-		int uploadKeyLength = key.length() / 2;
-		uploadKey = new byte[uploadKeyLength];
-		for(int i = 0; i < uploadKeyLength; ++i) {
-			String hexpair = key.substring(2 * i, 2 * i + 2);
-			uploadKey[i] = (byte)(Integer.parseInt(hexpair, 16) & 0xff);
-		}
+		uploadKey = new UploadKey("a8378747b56aa0c49d608bec38b159e8");
+//		String key = "a8378747b56aa0c49d608bec38b159e8";
+//		int uploadKeyLength = key.length() / 2;
+//		uploadKey = new byte[uploadKeyLength];
+//		for(int i = 0; i < uploadKeyLength; ++i) {
+//			String hexpair = key.substring(2 * i, 2 * i + 2);
+//			uploadKey[i] = (byte)(Integer.parseInt(hexpair, 16) & 0xff);
+//		}
 	}
 	
 	public void getPhotoStatus(HttpRequest request)
@@ -162,7 +166,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		String mac;
 		try {
 			mac = ss.getMacaddress();
-			uploadKey = db.getUploadKeyForMac(mac);
+			//uploadKey = db.getUploadKeyForMac(mac);
 		} finally {
 			db.close();
 		}
@@ -279,8 +283,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 					}
 					file = tarball.getNextEntry();
 				}
-				byte[] integrityDigest = checksum.getValue(uploadKey);
-				Log.d(TAG, "calculated digest " + EyefiMessage.toHexString(integrityDigest));
+				Hexstring integrityDigest = checksum.getValue(uploadKey);
+				Log.d(TAG, "calculated digest " + integrityDigest);
 			}
 			in.close();
 			headers = getHeaders(in, boundary);

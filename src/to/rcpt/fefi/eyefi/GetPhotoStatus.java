@@ -3,6 +3,11 @@ package to.rcpt.fefi.eyefi;
 import java.io.InputStream;
 import java.security.MessageDigest;
 
+import to.rcpt.fefi.eyefi.Types.Credential;
+import to.rcpt.fefi.eyefi.Types.ServerNonce;
+import to.rcpt.fefi.eyefi.Types.UploadKey;
+import to.rcpt.fefi.util.Hexstring;
+
 import android.util.Log;
 import android.util.Xml;
 
@@ -18,30 +23,24 @@ public class GetPhotoStatus extends EyefiMessage {
 		}
 	}
 	
-	public void authenticate(byte[] uploadKey, String serverNonce) {
-		String credential_hex = getParameter(MACADDRESS) + toHexString(uploadKey) + serverNonce;
+	public void authenticate(UploadKey uploadKey, ServerNonce serverNonce) {
+		String credential_hex = getParameter(MACADDRESS) + uploadKey + serverNonce;
 		Log.d(TAG, "parsing " + credential_hex);
-		int credentialLength = credential_hex.length() / 2;
-		byte credential[] = new byte[credentialLength];
-		for(int i = 0; i < credentialLength; ++i) {
-			String hexpair = credential_hex.substring(2 * i, 2 * i + 2);
-			credential[i] = (byte)(Integer.parseInt(hexpair, 16) & 0xff);
-		}
-		Log.d(TAG, "parsed  " + toHexString(credential));
-		StringBuffer s;
+		Hexstring hs = new Hexstring(credential_hex);
+		Log.d(TAG, "parsed  " + hs);
+		Credential c;
 		try {
 			MessageDigest md = MessageDigest.getInstance("MD5");
-			byte[] authentication = md.digest(credential);
-			s = toHexString(authentication);
+			byte[] authentication = md.digest(hs.toBytes());
+			c = new Credential(authentication);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-		Log.d(TAG, "calculated credential string " + s);
+		Log.d(TAG, "calculated credential string " + c);
 		String suppliedCredential = getParameter(CREDENTIAL);
 		Log.d(TAG, "supplied credential string " + suppliedCredential);
-		if(!s.equals(suppliedCredential))
+		if(!suppliedCredential.equals(c.toString()))
 //			throw new RuntimeException(); // TODO: make a better exception
 			Log.e(TAG, "FAIL!");
-			// TODO: FIX authentication!
 	}
 }

@@ -4,9 +4,12 @@ import java.io.UnsupportedEncodingException;
 
 import org.apache.http.entity.StringEntity;
 
+import to.rcpt.fefi.eyefi.Types.ServerNonce;
+import to.rcpt.fefi.eyefi.Types.UploadKey;
+
 public class StartSessionResponse extends EyefiResponse {
-	public StartSessionResponse(StartSession ss, byte[] uploadKey,
-			String serverNonce) {
+	public StartSessionResponse(StartSession ss, UploadKey uploadKey,
+			ServerNonce serverNonce) {
 		super();
 		try {
 			setEntity(new StringEntity(

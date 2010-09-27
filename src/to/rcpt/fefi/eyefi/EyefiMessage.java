@@ -22,17 +22,6 @@ public class EyefiMessage {
 		}
 	}
 
-	public static StringBuffer toHexString(byte[] byteString) {
-		StringBuffer s = new StringBuffer();
-		for(int i = 0; i < byteString.length; ++i) {
-			String stringByte = Integer.toHexString(((int)byteString[i]) & 0xff);
-			if(stringByte.length() == 1)
-				s.append("0");			
-			s.append(stringByte);
-		}
-		return s;
-	}
-
 	protected HashMap<String, String> contents = new HashMap<String, String>();
 	protected Element op;
 	protected RootElement soapEnvelope;

@@ -5,6 +5,9 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Vector;
 import java.util.zip.Checksum;
 
+import to.rcpt.fefi.eyefi.Types.UploadKey;
+import to.rcpt.fefi.util.Hexstring;
+
 import android.util.Log;
 
 public class EyefiIntegrityDigest implements Checksum {
@@ -14,7 +17,8 @@ public class EyefiIntegrityDigest implements Checksum {
 	private Vector<Integer> blockChecksums = new Vector<Integer>(2000, 2000);
 	public static final String TAG = "EyefiIntegrityDigest"; 
 
-	public byte[] getValue(byte[] uploadKey) {
+	public Hexstring getValue(UploadKey uk) {
+		byte[] uploadKey = uk.toBytes();
 		if(bytesCounted > 0)
 			completeBlock();
 		int numBlocks = blockChecksums.size();
@@ -27,8 +31,9 @@ public class EyefiIntegrityDigest implements Checksum {
 		try {
 			MessageDigest md = MessageDigest.getInstance("MD5");
 			byte[] authentication = md.digest(plaintext);
-			Log.d(TAG, "calculated " + EyefiMessage.toHexString(authentication));
-			return authentication;
+			Hexstring hs = new Hexstring(authentication);
+			Log.d(TAG, "calculated " + hs);
+			return hs;
 		} catch (NoSuchAlgorithmException e) {
 			throw new RuntimeException(e);
 		}
