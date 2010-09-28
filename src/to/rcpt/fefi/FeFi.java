@@ -5,16 +5,36 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Vector;
 
+import to.rcpt.fefi.eyefi.Types.MacAddress;
+import to.rcpt.fefi.eyefi.Types.UploadKey;
+
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.text.InputFilter;
+import android.text.method.DigitsKeyListener;
 import android.util.Log;
+import android.view.View;
+import android.view.View.OnClickListener;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.ToggleButton;
 
-public class FeFi extends Activity implements Runnable {
+public class FeFi extends Activity implements Runnable, OnClickListener {
 	private ServerSocket eyefiSocket;
 	public static final String TAG = "FeFi";
+	private ToggleButton button;
+
+	public void onClick(View arg0) {
+		if (button.isChecked()) {
+			testKey = new UploadKey(textKey.getEditableText().toString());
+			textKey.setEnabled(false);
+		} else {
+			testKey = null;
+			textKey.setEnabled(true);
+		}
+	}
 
 	/** Called when the activity is first created. */
 	@Override
@@ -31,6 +51,11 @@ public class FeFi extends Activity implements Runnable {
 			e.printStackTrace();
 		}
 		new Thread(this).start();
+		button = (ToggleButton) findViewById(R.id.togglebutton);
+		button.setOnClickListener(this);
+		textKey = (EditText)findViewById(R.id.edittext);
+		DigitsKeyListener dkl = DigitsKeyListener.getInstance("0123456789abcdefABCDEF");
+		textKey.getEditableText().setFilters(new InputFilter[] { dkl });
 	}
 
 	public void run() {
@@ -50,8 +75,8 @@ public class FeFi extends Activity implements Runnable {
 	class UnknownMacUpdater implements Runnable {
 		String mac;
 		
-		public UnknownMacUpdater(String mac) {
-			this.mac = mac;
+		public UnknownMacUpdater(MacAddress mac) {
+			this.mac = mac.toString();
 		}
 		
 		public void run() {
@@ -67,7 +92,11 @@ public class FeFi extends Activity implements Runnable {
 	}
 	
 	ArrayAdapter<String> unknownMacs;
-	public void addUnknownMac(String mac) {
+	private UploadKey testKey = null;
+	private EditText textKey;
+	
+	public UploadKey registerUnknownMac(MacAddress mac) {
 		runOnUiThread(new UnknownMacUpdater(mac));
+		return testKey;
 	}
 }

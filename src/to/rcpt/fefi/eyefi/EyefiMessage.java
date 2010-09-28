@@ -2,6 +2,8 @@ package to.rcpt.fefi.eyefi;
 
 import java.util.HashMap;
 
+import to.rcpt.fefi.eyefi.Types.MacAddress;
+
 import android.sax.Element;
 import android.sax.EndTextElementListener;
 import android.sax.RootElement;
@@ -58,4 +60,7 @@ public class EyefiMessage {
 		return value;
 	}
 
+	public MacAddress getMacAddress() {
+		return new MacAddress(getParameter(MACADDRESS));
+	}
 }

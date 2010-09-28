@@ -1,5 +1,6 @@
 package to.rcpt.fefi;
 
+import to.rcpt.fefi.eyefi.Types.MacAddress;
 import to.rcpt.fefi.eyefi.Types.UploadKey;
 import android.content.ContentValues;
 import android.content.Context;
@@ -30,7 +31,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 		Log.e(TAG, "creating DB");
 		db.execSQL("CREATE TABLE cameras (" +
 				"_id INTEGER PRIMARY KEY AUTOINCREMENT," +
-				"name TEXT NOT NULL," +
+				"name TEXT," +
 				"uploadKey TEXT NOT NULL," +
 				"macAddress TEXT NOT NULL);");
 		db.execSQL("CREATE UNIQUE INDEX macAddress " +
@@ -67,16 +68,25 @@ public class DBAdapter extends SQLiteOpenHelper {
 		Log.d(TAG, "adding image " + fileSignature + " with URI " + imageUri);
 		dbh.insertOrThrow("uploads", null, cv);
 	}
+
+	public void addNewKeyWithMac(MacAddress mac, UploadKey key) {
+		ContentValues cv = new ContentValues();
+		cv.put("uploadKey", key.toString());
+		cv.put("macAddress", mac.toString());
+		Log.d(TAG, "adding camera " + mac + " with key " + key);
+		dbh.insertOrThrow("cameras", null, cv);
+	}
 	
-	public UploadKey getUploadKeyForMac(String mac) {
-		Cursor c = dbh.query("cameras", new String[] { "uploadKey" }, "macAddress = ?", new String[] { mac }, null, null, null);
+	public UploadKey getUploadKeyForMac(MacAddress mac) {
+		Cursor c = dbh.query("cameras", new String[] { "uploadKey" }, "macAddress = ?", 
+				new String[] { mac.toString() }, null, null, null);
 		try {
 			if(!c.moveToFirst()) {
 				c.close();
 				// TODO: throw something
 				return null;
 			}
-			byte[] uploadKey = c.getBlob(c.getColumnIndex("uploadKey"));
+			String uploadKey = c.getString(c.getColumnIndex("uploadKey"));
 			return new UploadKey(uploadKey);
 		} finally {
 			c.close();

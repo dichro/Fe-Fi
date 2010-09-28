@@ -23,6 +23,16 @@ public class Types {
 		}
 	}
 
+	public static class MacAddress extends Hexstring {
+		public MacAddress(byte[] b) {
+			super(b);
+		}
+		
+		public MacAddress(String s) {
+			super(s);
+		}
+	}
+
 	public static class ServerNonce extends Hexstring {
 		public ServerNonce(byte[] b) {
 			super(b);

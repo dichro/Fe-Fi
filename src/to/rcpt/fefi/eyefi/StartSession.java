@@ -3,6 +3,7 @@ package to.rcpt.fefi.eyefi;
 import java.io.InputStream;
 import java.security.MessageDigest;
 
+import to.rcpt.fefi.eyefi.Types.MacAddress;
 import to.rcpt.fefi.eyefi.Types.ServerNonce;
 import to.rcpt.fefi.eyefi.Types.UploadKey;
 import to.rcpt.fefi.util.Hexstring;
@@ -14,8 +15,8 @@ import android.util.Log;
 import android.util.Xml;
 
 public class StartSession extends EyefiMessage {
-	public String getMacaddress() {
-		return macaddress;
+	public MacAddress getMacaddress() {
+		return new MacAddress(macaddress);
 	}
 	public String getCnonce() {
 		return cnonce;

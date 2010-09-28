@@ -30,6 +30,7 @@ import to.rcpt.fefi.eyefi.StartSession;
 import to.rcpt.fefi.eyefi.StartSessionResponse;
 import to.rcpt.fefi.eyefi.UploadPhoto;
 import to.rcpt.fefi.eyefi.UploadPhotoResponse;
+import to.rcpt.fefi.eyefi.Types.MacAddress;
 import to.rcpt.fefi.eyefi.Types.ServerNonce;
 import to.rcpt.fefi.eyefi.Types.UploadKey;
 import to.rcpt.fefi.util.Hexstring;
@@ -47,7 +48,7 @@ import android.util.Log;
 
 public class EyefiServerConnection extends DefaultHttpServerConnection implements Runnable {
 	public static final String TAG = "EyefiServerConnection";
-	private UploadKey uploadKey = null;
+//	private UploadKey uploadKey = null;
 	private static final ServerNonce serverNonce = new ServerNonce("deadbeefdeadbeefdeadbeefdeadbeef");
 	private FeFi context;
 	private static final String CONTENT_DISPOSITION_PREAMBLE = "form-data; name=\"";
@@ -62,7 +63,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	
 	protected EyefiServerConnection(FeFi c) {
 		context = c;
-		uploadKey = new UploadKey("a8378747b56aa0c49d608bec38b159e8");
+//		uploadKey = new UploadKey("a8378747b56aa0c49d608bec38b159e8");
 //		String key = "a8378747b56aa0c49d608bec38b159e8";
 //		int uploadKeyLength = key.length() / 2;
 //		uploadKey = new byte[uploadKeyLength];
@@ -81,7 +82,22 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		receiveRequestEntity(eyefiRequest);
 		GetPhotoStatus photoStatus = new GetPhotoStatus();
 		photoStatus.parse(eyefiRequest.getEntity().getContent());
-		photoStatus.authenticate(uploadKey, serverNonce);
+		MacAddress mac = photoStatus.getMacAddress();
+		UploadKey uploadKey = getKeyForMac(mac);
+		if(uploadKey != null)
+			photoStatus.authenticate(uploadKey, serverNonce);
+		else {
+			uploadKey = context.registerUnknownMac(mac);
+			if(uploadKey != null) {
+				photoStatus.authenticate(uploadKey, serverNonce);
+				DBAdapter db = DBAdapter.make(context);
+				try {
+					db.addNewKeyWithMac(mac, uploadKey);
+				} finally {
+					db.close();
+				}
+			}
+		}
 		int offset = 0;
 		String filesignature = photoStatus.getParameter("filesignature");
 		DBAdapter db = DBAdapter.make(context);
@@ -152,6 +168,17 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		
 	}
 
+	public UploadKey getKeyForMac(MacAddress mac) {
+		DBAdapter db = DBAdapter.make(context);
+		UploadKey uploadKey;
+		try {
+			uploadKey = db.getUploadKeyForMac(mac);
+		} finally {
+			db.close();
+		}
+		return uploadKey;
+	}
+	
 	public void startSession(HttpRequest request)
 			throws HttpException, IOException {
 		if (!(request instanceof HttpEntityEnclosingRequest))
@@ -161,18 +188,13 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		StartSession ss = StartSession.parse(eyefiRequest.getEntity()
 				.getContent());
 		Log.d(TAG, "parsed startsession");
-		DBAdapter db = DBAdapter.make(context);
-		Log.d(TAG, "opened DB");
-		String mac;
-		try {
-			mac = ss.getMacaddress();
-			//uploadKey = db.getUploadKeyForMac(mac);
-		} finally {
-			db.close();
-		}
+		MacAddress mac = ss.getMacaddress();
+		UploadKey uploadKey = getKeyForMac(mac);
+		if(uploadKey == null)
+			uploadKey = context.registerUnknownMac(mac);
 		if(uploadKey == null) {
-			context.addUnknownMac(mac);
 			close();
+			return;
 		}
 		StartSessionResponse ssr = new StartSessionResponse(ss, uploadKey,
 				serverNonce);
@@ -283,6 +305,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 					}
 					file = tarball.getNextEntry();
 				}
+				UploadKey uploadKey = getKeyForMac(uploadPhoto.getMacAddress());
 				Hexstring integrityDigest = checksum.getValue(uploadKey);
 				Log.d(TAG, "calculated digest " + integrityDigest);
 			}
