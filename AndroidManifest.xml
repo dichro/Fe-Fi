@@ -6,13 +6,19 @@
     <application android:icon="@drawable/icon" android:label="@string/app_name">
         <activity android:name=".FeFi"
                   android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
 
-    </application>
+	<activity android:name=".TabbedHomeActivity">
+		<intent-filter>
+			<action android:name="android.intent.action.MAIN" />
+			<category android:name="android.intent.category.LAUNCHER" />
+		</intent-filter>
+    </activity>
+<activity android:name="EyefiCardActivity"></activity>
+<activity android:name="IncomingImagesActivity"></activity>
+<activity android:name="EyefiCardScanActivity"></activity>
+<service android:name="EyefiReceiverService"></service>
+</application>
 
 
 

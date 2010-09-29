@@ -1,16 +1,16 @@
 package to.rcpt.fefi;
 
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.Vector;
 
+import to.rcpt.fefi.EyefiReceiverService.RelayBinder;
 import to.rcpt.fefi.eyefi.Types.MacAddress;
 import to.rcpt.fefi.eyefi.Types.UploadKey;
-
-
 import android.app.Activity;
+import android.content.ComponentName;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.text.InputFilter;
 import android.text.method.DigitsKeyListener;
 import android.util.Log;
@@ -21,25 +21,53 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ToggleButton;
 
-public class FeFi extends Activity implements OnClickListener {
-	public static final String TAG = "FeFi";
+public class EyefiCardScanActivity extends Activity implements OnClickListener {
 	private ToggleButton button;
+	public static final String TAG = "EyefiCardScanActivity";
 
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.card_scan);
+		ListView lv = (ListView)findViewById(R.id.unknown_mac_list);
+		unknownMacs = new ArrayAdapter<String>(this, R.layout.unknown_mac_item, new Vector<String>(5));
+		lv.setAdapter(unknownMacs);
+		lv.setTextFilterEnabled(true);
+		button = (ToggleButton) findViewById(R.id.togglebutton);
+		button.setOnClickListener(this);
+		textKey = (EditText)findViewById(R.id.edittext);
+		DigitsKeyListener dkl = DigitsKeyListener.getInstance("0123456789abcdefABCDEF");
+		textKey.getEditableText().setFilters(new InputFilter[] { dkl });
+		bindService(new Intent(this, EyefiReceiverService.class), networkService, BIND_AUTO_CREATE);
+    }
+
+    protected void onDestroy() {
+    	super.onDestroy();
+    	unbindService(networkService);
+    }
+    
+    RelayBinder binder = null;
+    
+    private ServiceConnection networkService = new ServiceConnection() {
+		public void onServiceConnected(ComponentName name, IBinder service) {
+			Log.d(TAG, "service bound");
+			binder = (RelayBinder) service;
+			binder.setKeyHelper(EyefiCardScanActivity.this);
+		}
+
+		public void onServiceDisconnected(ComponentName name) {
+			Log.d(TAG, "service unbound");
+			binder = null;
+		}
+    };
+    
 	public void onClick(View arg0) {
 		if (button.isChecked()) {
 			testKey = new UploadKey(textKey.getEditableText().toString());
-			textKey.setEnabled(false);
+			textKey.setEnabled(false);		
 		} else {
 			testKey = null;
 			textKey.setEnabled(true);
 		}
-	}
-
-	/** Called when the activity is first created. */
-	@Override
-	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		setContentView(R.layout.main);
 	}
 
 	class UnknownMacUpdater implements Runnable {
@@ -90,4 +118,5 @@ public class FeFi extends Activity implements OnClickListener {
 		runOnUiThread(new NewMacUpdater(mac));
 		
 	}
+
 }

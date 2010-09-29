@@ -50,18 +50,18 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	public static final String TAG = "EyefiServerConnection";
 //	private UploadKey uploadKey = null;
 	private static final ServerNonce serverNonce = new ServerNonce("deadbeefdeadbeefdeadbeefdeadbeef");
-	private FeFi context;
+	private EyefiReceiverService context;
 	private static final String CONTENT_DISPOSITION_PREAMBLE = "form-data; name=\"";
 	private static final String URN_GETPHOTOSTATUS = "\"urn:GetPhotoStatus\"";
 	private static final String URN_STARTSESSION = "\"urn:StartSession\"";
 	
-	public static EyefiServerConnection makeConnection(FeFi c, Socket s) throws IOException {
+	public static EyefiServerConnection makeConnection(EyefiReceiverService c, Socket s) throws IOException {
 		EyefiServerConnection me = new EyefiServerConnection(c);
 		me.bind(s, new BasicHttpParams());
 		return me;
 	}
 	
-	protected EyefiServerConnection(FeFi c) {
+	protected EyefiServerConnection(EyefiReceiverService c) {
 		context = c;
 //		uploadKey = new UploadKey("a8378747b56aa0c49d608bec38b159e8");
 //		String key = "a8378747b56aa0c49d608bec38b159e8";
