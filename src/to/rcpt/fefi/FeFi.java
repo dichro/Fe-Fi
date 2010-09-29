@@ -99,4 +99,25 @@ public class FeFi extends Activity implements Runnable, OnClickListener {
 		runOnUiThread(new UnknownMacUpdater(mac));
 		return testKey;
 	}
+	
+	class NewMacUpdater implements Runnable {
+		String mac;
+		
+		public NewMacUpdater(MacAddress mac) {
+			this.mac = mac.toString();
+		}
+		
+		public void run() {
+			unknownMacs.remove(mac);
+			button.setChecked(false);
+			textKey.setEnabled(true);
+			textKey.getEditableText().clear();
+		}
+	}
+	
+	public void registerNewCard(MacAddress mac, UploadKey uk) {
+		testKey = null;
+		runOnUiThread(new NewMacUpdater(mac));
+		
+	}
 }

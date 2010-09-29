@@ -93,9 +93,13 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				DBAdapter db = DBAdapter.make(context);
 				try {
 					db.addNewKeyWithMac(mac, uploadKey);
+					context.registerNewCard(mac, uploadKey);
 				} finally {
 					db.close();
 				}
+			} else {
+				close();
+				return;
 			}
 		}
 		int offset = 0;
@@ -261,7 +265,6 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			} else if(partName.equals("FILENAME")) {
 				EyefiIntegrityDigest checksum = new EyefiIntegrityDigest();
 				TarInputStream tarball = new TarInputStream(new CheckedInputStream(in, checksum));
-//				TarInputStream tarball = new TarInputStream(in);
 				TarEntry file = tarball.getNextEntry();
 				while(file != null) {
 					String fileName = file.getName();
