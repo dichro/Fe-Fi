@@ -88,6 +88,5 @@ public class FeFi extends Activity implements OnClickListener {
 	public void registerNewCard(MacAddress mac, UploadKey uk) {
 		testKey = null;
 		runOnUiThread(new NewMacUpdater(mac));
-		
 	}
 }

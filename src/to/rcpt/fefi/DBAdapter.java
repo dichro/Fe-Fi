@@ -69,12 +69,12 @@ public class DBAdapter extends SQLiteOpenHelper {
 		dbh.insertOrThrow("uploads", null, cv);
 	}
 
-	public void addNewKeyWithMac(MacAddress mac, UploadKey key) {
+	public long addNewKeyWithMac(MacAddress mac, UploadKey key) {
 		ContentValues cv = new ContentValues();
 		cv.put("uploadKey", key.toString());
 		cv.put("macAddress", mac.toString());
 		Log.d(TAG, "adding camera " + mac + " with key " + key);
-		dbh.insertOrThrow("cameras", null, cv);
+		return dbh.insertOrThrow("cameras", null, cv);
 	}
 	
 	public UploadKey getUploadKeyForMac(MacAddress mac) {

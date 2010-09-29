@@ -9,8 +9,10 @@ import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.provider.MediaStore.Images;
 import android.text.InputFilter;
 import android.text.method.DigitsKeyListener;
 import android.util.Log;
@@ -106,17 +108,16 @@ public class EyefiCardScanActivity extends Activity implements OnClickListener {
 		}
 		
 		public void run() {
-			unknownMacs.remove(mac);
-			button.setChecked(false);
-			textKey.setEnabled(true);
-			textKey.getEditableText().clear();
+			Intent i = new Intent();
+			i.putExtra("mac", mac.toString());
+			setResult(RESULT_OK, i);
+			finish();
 		}
 	}
 	
 	public void registerNewCard(MacAddress mac, UploadKey uk) {
 		testKey = null;
 		runOnUiThread(new NewMacUpdater(mac));
-		
 	}
 
 }
