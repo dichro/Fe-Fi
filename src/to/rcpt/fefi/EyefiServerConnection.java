@@ -3,6 +3,8 @@ package to.rcpt.fefi;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -19,6 +21,7 @@ import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.impl.DefaultHttpServerConnection;
 import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.CoreConnectionPNames;
 import org.apache.tools.tar.TarEntry;
 import org.apache.tools.tar.TarInputStream;
 
@@ -40,6 +43,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Environment;
 import android.provider.BaseColumns;
 import android.provider.MediaStore.Images;
 import android.provider.MediaStore.MediaColumns;
@@ -56,8 +60,12 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	private static final String URN_STARTSESSION = "\"urn:StartSession\"";
 	
 	public static EyefiServerConnection makeConnection(EyefiReceiverService c, Socket s) throws IOException {
+		s.setReceiveBufferSize(256 * 1024);
+		Log.d(TAG, "recv buffer size " + s.getReceiveBufferSize());
 		EyefiServerConnection me = new EyefiServerConnection(c);
-		me.bind(s, new BasicHttpParams());
+		BasicHttpParams params = new BasicHttpParams();
+		params.setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE, 256 * 1024);
+		me.bind(s, params);
 		return me;
 	}
 	
@@ -164,6 +172,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 					uploadPhoto(request);
 				} else {
 					Log.e(TAG, "unknown method " + uri);
+					close();
 				}
 			}
 		} catch (Exception e) {
@@ -239,7 +248,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		HttpEntity entity = eyefiRequest.getEntity();
 		Log.d(TAG, "entity " + entity + " len " + entity.getContentLength());
 		MultipartInputStream in = new MultipartInputStream(
-				new BufferedInputStream(entity.getContent()), boundary);
+				new BufferedInputStream(entity.getContent(), 400000), boundary);
 		Log.d(TAG, "made in " + in);
 		// find first boundary; should be at start
 		in.close();
@@ -263,6 +272,36 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				u.parse(in);
 				uploadPhoto = u;
 			} else if(partName.equals("FILENAME")) {
+				DBAdapter db = DBAdapter.make(context);
+				long index = db.addImage(uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE) + "-tmptar", Media.EXTERNAL_CONTENT_URI, "foo");
+				db.close();
+//				File path = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+//				File destination = new File(path, index + ".tar");
+//				Log.d(TAG, "shuffling image to " + destination);
+//				FileOutputStream fos = new FileOutputStream(destination);
+//				// argh. 
+//				int bufsize = 256 * 1024 + 1;
+//				byte buf[] = new byte[bufsize];
+//				int read = in.read(buf);
+//				while(read != -1) {
+//					long t1 = System.currentTimeMillis();
+//					fos.write(buf, 0, read);
+//					long t2 = System.currentTimeMillis();
+//					long delta = t2 - t1;
+//					if(delta > 0)
+//						Log.d(TAG, "wrote " + read + " bytes in " + delta + " ms for W" + read/delta);
+//					else
+//						Log.d(TAG, "wrote " + read + " bytes in " + delta + " ms");
+//					read = in.read(buf);
+//					t1 = System.currentTimeMillis();
+//					delta = t1 - t2;
+//					if(delta > 0)
+//						Log.d(TAG, "read  " + read + " bytes in " + delta + " ms for R" + read/delta);
+//					else
+//						Log.d(TAG, "read  " + read + " bytes in " + delta + " ms");
+//				}
+//				fos.close();
+//				Log.d(TAG, "shuffled image to " + destination);
 				EyefiIntegrityDigest checksum = new EyefiIntegrityDigest();
 				TarInputStream tarball = new TarInputStream(new CheckedInputStream(in, checksum));
 				TarEntry file = tarball.getNextEntry();
@@ -277,14 +316,19 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 						Log.d(TAG, "Processing image file " + fileName);
 						if(uploadPhoto == null)
 							break;
-						DBAdapter db = DBAdapter.make(context);
+						db = DBAdapter.make(context);
 						fileSignature = uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE);
 						boolean fileExists = db.imageExists(fileSignature);
 						db.close();
-//						Cursor results = getCursor(uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE));
-//						boolean fileExists = results.moveToFirst();
-//						results.close();
 						if(!fileExists) {
+//							db = DBAdapter.make(context);
+//							long index = db.addImage(uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE) + "-tmp", Media.EXTERNAL_CONTENT_URI, "foo");
+//							db.close();
+//							File path = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+//							File destination = new File(path, index + ".jpg");
+//							Log.d(TAG, "shuffling image to " + destination);
+//							tarball.copyEntryContents(new FileOutputStream(destination));
+//							Log.d(TAG, "shuffled image to " + destination);
 							ContentValues values = new ContentValues();
 							values.put(Media.DISPLAY_NAME, "eyefi/" + fileSignature);
 							values.put(Media.BUCKET_DISPLAY_NAME, "bucket display?");
@@ -297,15 +341,19 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 							try {
 								OutputStream out = cr.openOutputStream(uri);
 								Log.d(TAG, "shuffling image to " + uri);
+								long t1 = System.currentTimeMillis();
 								tarball.copyEntryContents(out);
 								out.close();
-								Log.d(TAG, "done with " + uri);
+								long t2 = System.currentTimeMillis();
+								long delta = t2 - t1;
+								Log.d(TAG, "done with " + uri + " copy after " + delta + " ms ");
 							} catch(IOException e) {
 								Log.e(TAG, "IO fail " + e);
 							}
 						} else
 							Log.e(TAG, "file exists!");
 					}
+					Log.d(TAG, "skipping to next entry");
 					file = tarball.getNextEntry();
 				}
 				UploadKey uploadKey = getKeyForMac(uploadPhoto.getMacAddress());
@@ -315,13 +363,14 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			in.close();
 			headers = getHeaders(in, boundary);
 		}
+		Log.d(TAG, " done with multipart input, have a uri " + uri);
 		if(uri != null) {
 			// we saved something; we should track it
 			DBAdapter db = DBAdapter.make(context);
 			db.addImage(fileSignature, uri, log);
 			db.close();
 		}
-		UploadPhotoResponse response = new UploadPhotoResponse(false);
+		UploadPhotoResponse response = new UploadPhotoResponse(true);
 		sendResponseHeader(response);
 		sendResponseEntity(response);
 	}

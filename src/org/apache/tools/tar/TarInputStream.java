@@ -38,7 +38,7 @@ import java.io.OutputStream;
 public class TarInputStream extends FilterInputStream {
     private static final int SMALL_BUFFER_SIZE = 256;
     private static final int BUFFER_SIZE = 8 * 1024;
-    private static final int LARGE_BUFFER_SIZE = 32 * 1024;
+    private static final int LARGE_BUFFER_SIZE = 256 * 1024;
     private static final int BYTE_MASK = 0xFF;
 
     // CheckStyle:VisibilityModifier OFF - bc

@@ -14,7 +14,7 @@ public class EyefiIntegrityDigest implements Checksum {
 	private int counterValue = 0;
 	private int bytesCounted = 0;
 	private int spare = -1;
-	private Vector<Integer> blockChecksums = new Vector<Integer>(2000, 2000);
+	private Vector<Integer> blockChecksums = new Vector<Integer>(20000);
 	public static final String TAG = "EyefiIntegrityDigest"; 
 
 	public Hexstring getValue(UploadKey uk) {

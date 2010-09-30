@@ -60,13 +60,13 @@ public class DBAdapter extends SQLiteOpenHelper {
 		return ret;
 	}
 	
-	public void addImage(String fileSignature, Uri imageUri, String log) {
+	public long addImage(String fileSignature, Uri imageUri, String log) {
 		ContentValues cv = new ContentValues();
 		cv.put("fileSignature", fileSignature);
 		cv.put("imageUri", imageUri.toString());
 		cv.put("log", log);
 		Log.d(TAG, "adding image " + fileSignature + " with URI " + imageUri);
-		dbh.insertOrThrow("uploads", null, cv);
+		return dbh.insertOrThrow("uploads", null, cv);
 	}
 
 	public long addNewKeyWithMac(MacAddress mac, UploadKey key) {

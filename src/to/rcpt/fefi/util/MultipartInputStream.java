@@ -9,7 +9,7 @@ import android.util.Log;
 public class MultipartInputStream extends FilterInputStream {
 	KMPMatch match;
 	String boundary;
-	int bufSize = 40000;
+	int bufSize = 256 * 1024;
 	int maxRead;
 	byte[] buf;
 	boolean isEof = true;
@@ -24,7 +24,6 @@ public class MultipartInputStream extends FilterInputStream {
 	
 	public void setBoundary(String b) {
 		// must be called only when buffer has been read.
-		Log.d(TAG, "new boundary " + b);
 		if(!isEof)
 			throw new RuntimeException("bah, humbug");
 		boundary = b;
@@ -56,7 +55,6 @@ public class MultipartInputStream extends FilterInputStream {
 			int boundaryPosition = match.indexOf(buf, 0, read);
 			//   if found, push back everything beyond it; return everything above it
 			if(boundaryPosition >= 0) {
-				Log.d(TAG, "boundary at " + boundaryPosition);
 				// can has boundary! re-read only up to the end of the boundary
 				in.reset();
 				read = in.read(buf, 0, boundaryPosition + boundaryLength);
@@ -81,7 +79,6 @@ public class MultipartInputStream extends FilterInputStream {
 		int boundaryPosition = match.indexOf(buf, additionalStart, read + additionalRead - additionalStart);
 		//     if found, as above
 		if(boundaryPosition >= 0) {
-			Log.d(TAG, "boundary at " + boundaryPosition);
 			// can has boundary! re-read only up to the end of the boundary
 			in.reset();
 			read = in.read(buf, read, boundaryPosition + boundaryLength - read);

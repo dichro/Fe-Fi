@@ -18,7 +18,7 @@ public class EyefiReceiverService extends Service implements Runnable {
 	public static final String TAG = "EyefiReceiverService";
 
 	public void run() {
-		while (true) {
+		while (!eyefiSocket.isClosed()) { // .isBound() remains true after closing?
 			try {
 				Socket eyefiClient = eyefiSocket.accept();
 				Log.i(TAG, "connection from " + eyefiClient.getRemoteSocketAddress());
@@ -29,9 +29,12 @@ public class EyefiReceiverService extends Service implements Runnable {
 				e.printStackTrace();
 			}
 		}
+		stopSelf();
 	}
 
 	public void onCreate() {
+		super.onCreate();
+		Log.d(TAG, "onCreate");
 		try {
 			eyefiSocket = new ServerSocket(59278);
 		} catch (IOException e) {
@@ -65,5 +68,16 @@ public class EyefiReceiverService extends Service implements Runnable {
 		if(testKeyHelper == null)
 			return null;
 		return testKeyHelper.registerUnknownMac(mac);
+	}
+	
+	public void onDestroy() {
+		super.onDestroy();
+		Log.d(TAG, "onDestroy");
+		try {
+			eyefiSocket.close();
+		} catch (Exception e) {
+			// TODO: care? no? Log something?
+			Log.d(TAG, "onDestroy exception " + e);
+		}
 	}
 }

@@ -22,6 +22,7 @@ public class EyefiCardActivity extends Activity {
     }
     
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-    	Log.d("foo", "got req " + requestCode + " res " + resultCode + " inte " + data + " mac " + data.getStringExtra("mac"));
+    	if(data != null)
+    		Log.d("foo", "got req " + requestCode + " res " + resultCode + " inte " + data + " mac " + data.getStringExtra("mac"));
     }
 }
