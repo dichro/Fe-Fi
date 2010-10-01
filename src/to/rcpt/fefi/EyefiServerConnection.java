@@ -96,8 +96,9 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				photoStatus.authenticate(uploadKey, serverNonce);
 				DBAdapter db = DBAdapter.make(context);
 				try {
-					db.addNewKeyWithMac(mac, uploadKey);
-					context.registerNewCard(mac, uploadKey);
+					long id = db.addNewKeyWithMac(mac, uploadKey);
+					Log.d(TAG, "registered " + mac + " with id " + id);
+					context.registerNewCard(mac, uploadKey, id);
 				} finally {
 					db.close();
 				}

@@ -11,6 +11,7 @@ import android.net.Uri;
 import android.util.Log;
 
 public class DBAdapter extends SQLiteOpenHelper {
+	private static final String CARDS = "cameras";
 	private static final String TAG = "DBAdapter";
 	protected SQLiteDatabase dbh;
 	
@@ -29,13 +30,13 @@ public class DBAdapter extends SQLiteOpenHelper {
 	@Override
 	public void onCreate(SQLiteDatabase db) {
 		Log.e(TAG, "creating DB");
-		db.execSQL("CREATE TABLE cameras (" +
+		db.execSQL("CREATE TABLE " + CARDS + " (" +
 				"_id INTEGER PRIMARY KEY AUTOINCREMENT," +
 				"name TEXT," +
 				"uploadKey TEXT NOT NULL," +
 				"macAddress TEXT NOT NULL);");
 		db.execSQL("CREATE UNIQUE INDEX macAddress " +
-				"ON cameras(macAddress);");
+				"ON " + CARDS + "(macAddress);");
 		db.execSQL("CREATE TABLE uploads (" +
 				"_id INTEGER PRIMARY KEY AUTOINCREMENT," +
 				"fileSignature TEXT NOT NULL," +
@@ -73,12 +74,11 @@ public class DBAdapter extends SQLiteOpenHelper {
 		ContentValues cv = new ContentValues();
 		cv.put("uploadKey", key.toString());
 		cv.put("macAddress", mac.toString());
-		Log.d(TAG, "adding camera " + mac + " with key " + key);
-		return dbh.insertOrThrow("cameras", null, cv);
+		return dbh.insertOrThrow(CARDS, null, cv);
 	}
 	
 	public UploadKey getUploadKeyForMac(MacAddress mac) {
-		Cursor c = dbh.query("cameras", new String[] { "uploadKey" }, "macAddress = ?", 
+		Cursor c = dbh.query(CARDS, new String[] { "uploadKey" }, "macAddress = ?", 
 				new String[] { mac.toString() }, null, null, null);
 		try {
 			if(!c.moveToFirst()) {
@@ -94,12 +94,24 @@ public class DBAdapter extends SQLiteOpenHelper {
 	}
 	
 	public Cursor getCards() {
-		Cursor c = dbh.query("cameras", new String[] { "_id", "name", "macAddress" }, 
+		Cursor c = dbh.query(CARDS, new String[] { "_id", "name", "macAddress" }, 
 				null, null, null, null, null);
 		return c;
 	}
 	
-	public void deleteCamera(int id) {
-		dbh.delete("cameras", "_id = ?", new String[] { id + "" });
+	public Cursor getCard(long id) {
+		Cursor c = dbh.query(CARDS, new String[] { "_id", "name", "macAddress" }, 
+				"_id = ?", new String[] { id + "" }, null, null, null);
+		return c;
+	}
+	
+	public void deleteCard(int id) {
+		dbh.delete(CARDS, "_id = ?", new String[] { id + "" });
+	}
+	
+	public void updateCardName(long id, String name) {
+		ContentValues cv = new ContentValues();
+		cv.put("name", name);
+		dbh.update(CARDS, cv, "_id = ?", new String[] { id + "" });
 	}
 }

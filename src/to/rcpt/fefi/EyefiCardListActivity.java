@@ -39,7 +39,7 @@ public class EyefiCardListActivity extends ListActivity {
         c = db.getCards();
         startManagingCursor(c);
         adapter = new SimpleCursorAdapter(this, R.layout.card_control_item, c,
-        		new String[] { "name", "macAddress" }, new int[] { R.id.text1, R.id.text2 });
+        		new String[] { "name", "macAddress" }, new int[] { R.id.name, R.id.macaddress });
 		setListAdapter(adapter);
         registerForContextMenu(getListView());
     }
@@ -58,7 +58,7 @@ public class EyefiCardListActivity extends ListActivity {
 		}
 		
 		public void onClick(DialogInterface dialog, int which) {
-			db.deleteCamera(cardId);
+			db.deleteCard(cardId);
 			c.requery();
 		}
 	}
@@ -80,6 +80,7 @@ public class EyefiCardListActivity extends ListActivity {
 		AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
 		switch (item.getItemId()) {
 		case R.id.edit:
+			launchEditActivity(info.id);
 			return true;
 		case R.id.delete:
 			showDialog((int)info.id);
@@ -88,12 +89,21 @@ public class EyefiCardListActivity extends ListActivity {
 			return super.onContextItemSelected(item);
 		}
 	}
+
+	private void launchEditActivity(long id) {
+		Intent i = new Intent().setClass(this, EyefiCardEditActivity.class);
+		i.putExtra("id", id);
+		startActivity(i);
+	}
 	
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-    	if(data != null)
+    	if(data != null) {
     		Log.d("foo", "got req " + requestCode + " res " + resultCode + " inte " + data + " mac " + data.getStringExtra("mac"));
+    		launchEditActivity(data.getLongExtra("id", -1));
+    	}
     }
     
+    @Override
     protected void onDestroy() {
     	super.onDestroy();
     	db.close();

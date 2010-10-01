@@ -100,22 +100,26 @@ public class EyefiCardScanActivity extends Activity implements OnClickListener {
 	
 	class NewMacUpdater implements Runnable {
 		String mac;
+		long id;
 		
-		public NewMacUpdater(MacAddress mac) {
+		public NewMacUpdater(MacAddress mac, long id) {
 			this.mac = mac.toString();
+			this.id = id;
 		}
 		
 		public void run() {
 			Intent i = new Intent();
 			i.putExtra("mac", mac.toString());
+			i.putExtra("id", id);
+			Log.d(TAG, "done with " + mac + " on id " + id);
 			setResult(RESULT_OK, i);
 			finish();
 		}
 	}
 	
-	public void registerNewCard(MacAddress mac, UploadKey uk) {
+	public void registerNewCard(MacAddress mac, UploadKey uk, long id) {
 		testKey = null;
-		runOnUiThread(new NewMacUpdater(mac));
+		runOnUiThread(new NewMacUpdater(mac, id));
 	}
 
 }

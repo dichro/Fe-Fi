@@ -58,10 +58,10 @@ public class EyefiReceiverService extends Service implements Runnable {
 		return binder;
 	}
 
-	public void registerNewCard(MacAddress mac, UploadKey uk) {
+	public void registerNewCard(MacAddress mac, UploadKey uk, long id) {
 		if(testKeyHelper == null)
 			return;
-		testKeyHelper.registerNewCard(mac, uk);		
+		testKeyHelper.registerNewCard(mac, uk, id);		
 	}
 
 	public UploadKey registerUnknownMac(MacAddress mac) {
