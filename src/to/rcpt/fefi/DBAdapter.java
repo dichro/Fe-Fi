@@ -92,4 +92,14 @@ public class DBAdapter extends SQLiteOpenHelper {
 			c.close();
 		}
 	}
+	
+	public Cursor getCards() {
+		Cursor c = dbh.query("cameras", new String[] { "_id", "name", "macAddress" }, 
+				null, null, null, null, null);
+		return c;
+	}
+	
+	public void deleteCamera(int id) {
+		dbh.delete("cameras", "_id = ?", new String[] { id + "" });
+	}
 }

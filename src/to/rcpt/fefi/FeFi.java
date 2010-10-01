@@ -1,24 +1,14 @@
 package to.rcpt.fefi;
 
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.Vector;
-
 import to.rcpt.fefi.eyefi.Types.MacAddress;
 import to.rcpt.fefi.eyefi.Types.UploadKey;
 
-
 import android.app.Activity;
 import android.os.Bundle;
-import android.text.InputFilter;
-import android.text.method.DigitsKeyListener;
-import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.ToggleButton;
 
 public class FeFi extends Activity implements OnClickListener {

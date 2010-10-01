@@ -15,7 +15,7 @@ public class TabbedHomeActivity extends TabActivity {
 		TabHost.TabSpec tabSpec;
 		Intent intent;
 		
-		intent = new Intent().setClass(this, EyefiCardActivity.class);
+		intent = new Intent().setClass(this, EyefiCardListActivity.class);
 		tabSpec = tabHost.newTabSpec("cards").setIndicator("Cards").setContent(intent);
 		tabHost.addTab(tabSpec);
 		

@@ -14,7 +14,7 @@
 			<category android:name="android.intent.category.LAUNCHER" />
 		</intent-filter>
     </activity>
-<activity android:name="EyefiCardActivity"></activity>
+<activity android:name="EyefiCardListActivity"></activity>
 <activity android:name="IncomingImagesActivity"></activity>
 <activity android:name="EyefiCardScanActivity"></activity>
 <service android:name="EyefiReceiverService"></service>
