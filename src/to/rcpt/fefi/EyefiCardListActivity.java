@@ -6,6 +6,7 @@ import android.app.ListActivity;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -33,6 +34,14 @@ public class EyefiCardListActivity extends ListActivity {
 			public void onClick(View v) {
 				Intent i = new Intent().setClass(EyefiCardListActivity.this, EyefiCardScanActivity.class);
 				startActivityForResult(i, 0);
+			}
+		});
+        b = (Button)findViewById(R.id.buy_button);
+        b.setOnClickListener(new OnClickListener() {		
+			public void onClick(View v) {
+				Intent i = new Intent().setAction(Intent.ACTION_VIEW);
+				i.setData(Uri.parse("http://eyefi.tellapal.com/a/clk/8rl5j"));
+				startActivity(i);
 			}
 		});
         db = DBAdapter.make(this);
