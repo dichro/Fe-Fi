@@ -7,10 +7,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.zip.CheckedInputStream;
 
 import org.apache.http.Header;
@@ -47,7 +50,7 @@ import android.util.Log;
 
 public class EyefiServerConnection extends DefaultHttpServerConnection implements Runnable {
 	public static final String TAG = "EyefiServerConnection";
-	private static final ServerNonce serverNonce = new ServerNonce("deadbeefdeadbeefdeadbeefdeadbeef");
+	private ServerNonce serverNonce = new ServerNonce("deadbeefdeadbeefdeadbeefdeadbeef");
 	private EyefiReceiverService context;
 	private static final String CONTENT_DISPOSITION_PREAMBLE = "form-data; name=\"";
 	private static final String URN_GETPHOTOSTATUS = "\"urn:GetPhotoStatus\"";
@@ -67,6 +70,19 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	protected EyefiServerConnection(EyefiReceiverService c) {
 		context = c;
 		db = context.getDatabase();
+		byte buf[] = new byte[16];
+		Random r = new Random();
+		r.nextBytes(buf);
+		long now = System.currentTimeMillis();
+		buf[0] = (byte)now;
+		buf[1] = (byte)(now >> 8);
+		try {
+			MessageDigest md = MessageDigest.getInstance("MD5");
+			byte[] nonce = md.digest(buf);
+			serverNonce = new ServerNonce(nonce);
+		} catch (NoSuchAlgorithmException e) {
+			// TODO: handle exception
+		}
 	}
 	
 	public void getPhotoStatus(HttpRequest request)
@@ -86,10 +102,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			uploadKey = context.registerUnknownMac(mac);
 			if(uploadKey != null) {
 				photoStatus.authenticate(uploadKey, serverNonce);
-					long id;
-//					synchronized(db) {
-						id = db.addNewKeyWithMac(mac, uploadKey);
-//					}
+					long id = db.addNewKeyWithMac(mac, uploadKey);
 					Log.d(TAG, "registered " + mac + " with id " + id);
 					context.registerNewCard(mac, uploadKey, id);
 			} else {
@@ -149,9 +162,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 
 	public UploadKey getKeyForMac(MacAddress mac) {
 		UploadKey uploadKey;
-//		synchronized(db) {
-			uploadKey = db.getUploadKeyForMac(mac);
-//		}
+		uploadKey = db.getUploadKeyForMac(mac);
 		return uploadKey;
 	}
 	
@@ -254,10 +265,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 						}
 						fileSignature = uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE);
 						imageName = fileName;
-						boolean fileExists;
-//						synchronized(db) {
-							fileExists = db.imageExists(fileSignature);
-//						}
+						boolean fileExists = db.imageExists(fileSignature);
 						Log.d(TAG, "image " + fileName + " has signature " + fileSignature + " exists " + fileExists);
 						if(!fileExists) {
 							ContentValues values = new ContentValues();
@@ -297,9 +305,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		Log.d(TAG, " done with multipart input, have a uri " + uri);
 		if(uri != null) {
 			// we saved something; we should track it
-//			synchronized(db) {
-				db.addImage(fileSignature, uri, log, imageName);
-//			}
+			db.addImage(fileSignature, uri, log, imageName);
 		}
 		UploadPhotoResponse response = new UploadPhotoResponse(true);
 		sendResponseHeader(response);
