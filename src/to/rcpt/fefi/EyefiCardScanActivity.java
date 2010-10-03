@@ -9,6 +9,7 @@ import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.text.InputFilter;
@@ -17,6 +18,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ToggleButton;
@@ -38,6 +40,14 @@ public class EyefiCardScanActivity extends Activity implements OnClickListener {
 		DigitsKeyListener dkl = DigitsKeyListener.getInstance("0123456789abcdefABCDEF");
 		textKey.getEditableText().setFilters(new InputFilter[] { dkl });
 		bindService(new Intent(this, EyefiReceiverService.class), networkService, BIND_AUTO_CREATE);
+		Button b = (Button) findViewById(R.id.help);
+		b.setOnClickListener(new OnClickListener() {
+			public void onClick(View v) {
+				Intent i = new Intent().setAction(Intent.ACTION_VIEW);
+				i.setData(Uri.parse("https://sites.google.com/a/rcpt.to/fe-fi/help/upload-key"));
+				startActivity(i);
+			}
+		});
     }
 
     protected void onDestroy() {

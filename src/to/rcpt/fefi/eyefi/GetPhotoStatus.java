@@ -25,9 +25,7 @@ public class GetPhotoStatus extends EyefiMessage {
 	
 	public void authenticate(UploadKey uploadKey, ServerNonce serverNonce) {
 		String credential_hex = getParameter(MACADDRESS) + uploadKey + serverNonce;
-		Log.d(TAG, "parsing " + credential_hex);
 		Hexstring hs = new Hexstring(credential_hex);
-		Log.d(TAG, "parsed  " + hs);
 		MacAddress c;
 		try {
 			MessageDigest md = MessageDigest.getInstance("MD5");
@@ -36,9 +34,7 @@ public class GetPhotoStatus extends EyefiMessage {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-		Log.d(TAG, "calculated credential string " + c);
 		String suppliedCredential = getParameter(CREDENTIAL);
-		Log.d(TAG, "supplied credential string " + suppliedCredential);
 		if(!suppliedCredential.equals(c.toString())) {
 			Log.e(TAG, "FAIL!");
 			throw new RuntimeException(); // TODO: make a better exception

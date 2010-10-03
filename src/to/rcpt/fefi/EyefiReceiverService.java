@@ -37,10 +37,12 @@ public class EyefiReceiverService extends Service implements Runnable {
 		Log.d(TAG, "onCreate");
 		try {
 			eyefiSocket = new ServerSocket(59278);
+			eyefiSocket.setReuseAddress(true);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		new Thread(this).start();
+		db = DBAdapter.make(this);
 	}
 	
 	private EyefiCardScanActivity testKeyHelper = null;
@@ -52,6 +54,9 @@ public class EyefiReceiverService extends Service implements Runnable {
 	}
 	
 	private RelayBinder binder = new RelayBinder();
+	private DBAdapter db;
+	
+	public DBAdapter getDatabase() { return db; }
 	
 	@Override
 	public IBinder onBind(Intent arg0) {
@@ -73,6 +78,7 @@ public class EyefiReceiverService extends Service implements Runnable {
 	public void onDestroy() {
 		super.onDestroy();
 		Log.d(TAG, "onDestroy");
+		db.close();
 		try {
 			eyefiSocket.close();
 		} catch (Exception e) {

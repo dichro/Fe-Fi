@@ -7,6 +7,7 @@
 	<TableRow>
 		<TextView xmlns:android="http://schemas.android.com/apk/res/android"
 			android:text="Name" android:layout_width="fill_parent"
+			android:textSize="20sp"
 			android:layout_height="wrap_content" />
 			
 		<EditText android:id="@+id/card_name" android:layout_width="fill_parent"
@@ -15,16 +16,19 @@
 
 	<TableRow>
 		<TextView xmlns:android="http://schemas.android.com/apk/res/android"
-			android:text="MAC Address" android:layout_width="fill_parent"
+			android:text="MAC" android:layout_width="fill_parent"
+			android:textSize="20sp"
 			android:layout_height="wrap_content" />
 			
 		<TextView xmlns:android="http://schemas.android.com/apk/res/android"
 			android:id="@+id/card_macaddress" android:layout_width="fill_parent"
 			android:gravity="right"
+			android:textSize="20sp"
 			android:layout_height="wrap_content" />
 	</TableRow>
 		
 	<Button android:id="@+id/save"
+		android:textSize="20sp"
 		android:layout_width="fill_parent" android:layout_height="wrap_content"
 		android:text="Save" />
 </TableLayout>

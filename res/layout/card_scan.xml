@@ -4,11 +4,12 @@
 	android:layout_height="fill_parent">
 
 	<TextView xmlns:android="http://schemas.android.com/apk/res/android"
-		android:id="@+id/textview" android:layout_width="fill_parent"
+		android:layout_width="fill_parent"
+		android:textSize="20sp"		
 		android:layout_height="wrap_content" android:text="@string/upload_key_prompt" />
 		
 	<EditText android:id="@+id/edittext" android:layout_width="fill_parent"
-		android:layout_height="wrap_content" android:text="a8378747b56aa0c49d608bec38b159e8"/>
+		android:layout_height="wrap_content" />
 
 	<ToggleButton android:id="@+id/togglebutton"
 		android:layout_width="fill_parent" android:layout_height="wrap_content"
@@ -16,4 +17,14 @@
         
 	<ListView android:id="@+id/unknown_mac_list"
 		android:layout_width="fill_parent" android:layout_height="wrap_content" />
+
+	<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+		android:layout_width="fill_parent"
+		android:textSize="16sp"		
+		android:layout_height="wrap_content" android:text="@string/upload_key_supplemental" />
+		
+	<Button android:id="@+id/help"
+		android:layout_width="fill_parent" android:layout_height="wrap_content"
+		android:text="Help me?" />
+	
 </LinearLayout>

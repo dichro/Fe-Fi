@@ -59,25 +59,21 @@ public class StartSession extends EyefiMessage {
 		final StartSession ss = new StartSession();
 		eyefiMacaddress.setEndTextElementListener(new EndTextElementListener() {
 			public void end(String body) {
-				Log.d(TAG, "parsed mac: " + body);
 				ss.setMacaddress(body);
 			}
 		});
 		eyefiCnonce.setEndTextElementListener(new EndTextElementListener() {
 			public void end(String body) {
-				Log.d(TAG, "parsed cnonce: " + body);
 				ss.setCnonce(body);
 			}
 		});
 		eyefiTransfermode.setEndTextElementListener(new EndTextElementListener() {
 			public void end(String body) {
-				Log.d(TAG, "parsed transfermode: " + body);
 				ss.setTransfermode(body);
 			}
 		});
 		eyefiTransfermodetimestamp.setEndTextElementListener(new EndTextElementListener() {
 			public void end(String body) {
-				Log.d(TAG, "parsed transfermodetimestamp: " + body);
 				ss.setTransfermodetimestamp(body);
 			}
 		});
@@ -91,9 +87,7 @@ public class StartSession extends EyefiMessage {
 	
 	ServerNonce calculateCredential(UploadKey uploadKey) {
 		String credential_hex = getMacaddress() + getCnonce() + uploadKey;
-		Log.d(TAG, "parsing " + credential_hex);
 		Hexstring credential = new Hexstring(credential_hex);
-		Log.d(TAG, "parsed " + credential);
 		try {
 			MessageDigest md = MessageDigest.getInstance("MD5");
 			byte[] authentication = md.digest(credential.toBytes());

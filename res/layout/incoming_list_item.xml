@@ -4,14 +4,14 @@
      android:layout_height="wrap_content"
      android:orientation="horizontal">
 
-     <TextView android:id="@+id/macaddress"
-         android:textSize="20sp"
-         android:paddingRight="10sp"
+     <TextView android:id="@+id/name"
+         android:textSize="16sp"
+         android:paddingRight="16sp"
          android:layout_width="wrap_content"
          android:layout_height="wrap_content"/>
 
-     <TextView android:id="@+id/name"
-         android:textSize="20sp"
+     <TextView android:id="@+id/received"
+         android:textSize="16sp"
          android:layout_width="wrap_content"
          android:layout_height="wrap_content"/>
 

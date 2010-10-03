@@ -3,4 +3,7 @@
     <string name="hello">Hello World, FeFi!</string>
     <string name="app_name">Fe-Fi</string>
 <string name="upload_key_prompt">Enter upload key for new card</string>
+
+
+<string name="upload_key_supplemental">The upload key can be usually found on the computer where you originally activated your Eye-Fi card, in the file C:\\Documents and Settings\\[User]\\Application Data\\Eye-Fi\\Settings.xml</string>
 </resources>

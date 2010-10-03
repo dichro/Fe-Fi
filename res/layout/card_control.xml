@@ -3,7 +3,18 @@
 	android:orientation="vertical" android:layout_width="fill_parent"
 	android:layout_height="fill_parent">
 
+	<ToggleButton android:id="@+id/enable_service"
+		android:layout_width="fill_parent" android:layout_height="wrap_content"
+		android:textOn="Ready to receive pictures" android:textOff="Receiving pictures disabled" />
+
+	<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+		android:layout_width="fill_parent"
+		android:textSize="20sp"		
+		android:layout_height="wrap_content" android:text="Configured cards:" />
+		        
 	<ListView android:id="@android:id/list"
+		android:paddingBottom="20sp"
+		android:paddingTop="10sp"
 		android:layout_width="fill_parent" android:layout_height="wrap_content" />
 
 	<Button xmlns:android="http://schemas.android.com/apk/res/android"
