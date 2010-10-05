@@ -11,6 +11,7 @@ import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 
 public class IncomingImagesActivity extends ListActivity {
+	private static final String IMAGES_UPDATED = "updated";
 	private DBAdapter db;
 	private static final String TAG = "IncomingImagesActivity";
 	private Cursor c;
@@ -23,12 +24,12 @@ public class IncomingImagesActivity extends ListActivity {
         c = db.getUploads();
         startManagingCursor(c);
         adapter = new SimpleCursorAdapter(this, R.layout.incoming_list_item, c,
-        		new String[] { "name", "received" }, new int[] { R.id.name, R.id.received });
+        		new String[] { "name", IMAGES_UPDATED }, new int[] { R.id.name, R.id.received });
         adapter.setViewBinder(new SimpleCursorAdapter.ViewBinder() {
 			
 			public boolean setViewValue(View view, Cursor cursor, int columnIndex) {
 				TextView tv = (TextView) view;
-				int index = cursor.getColumnIndex("received");
+				int index = cursor.getColumnIndex(IMAGES_UPDATED);
 				if(columnIndex == index) {
 					long timestamp = cursor.getLong(index);
 					Date d = new Date(timestamp);

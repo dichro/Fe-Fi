@@ -41,10 +41,12 @@ public class DBAdapter extends SQLiteOpenHelper {
 		db.execSQL("CREATE TABLE " + UPLOADS + " (" +
 				"_id INTEGER PRIMARY KEY AUTOINCREMENT," +
 				"fileSignature TEXT NOT NULL," +
-				"received INT," +
+				"updated INT," +
 				"name TEXT," +
 				"imageUri TEXT," +
-				"log TEXT);");
+				"log TEXT," +
+				"status INT," +
+				"path TEXT);");
 		db.execSQL("CREATE UNIQUE INDEX fileSignature " +
 				"ON " + UPLOADS + "(fileSignature);");
 		Log.e(TAG, "DB creation done");
@@ -55,33 +57,68 @@ public class DBAdapter extends SQLiteOpenHelper {
 		Log.e(TAG, "upgrade requested from " + arg1 + " to " + arg2);
 	}
 	
-	public boolean imageExists(String fileSignature) {
+	public long imageExists(String fileSignature) {
 		Cursor c = dbh.query(UPLOADS, idColumns, "fileSignature = ?", 
 				new String[] { fileSignature }, null, null, null);
-		boolean ret = c.moveToFirst();
+		int ret = -1;
+		if(c.moveToFirst()) {
+			ret = c.getInt(c.getColumnIndex("_id"));			
+		}
 		Log.d(TAG, "imageExists " + fileSignature + " = " + ret);
 		c.close();
 		return ret;
 	}
 	
+	public long imageUploadable(String fileSignature) {
+		Cursor c = dbh.query(UPLOADS, new String[] { "_id", "status" }, "fileSignature = ?", 
+				new String[] { fileSignature }, null, null, null);
+		long ret = -1;
+		if(c.moveToFirst() && (0 == c.getInt(c.getColumnIndex("status")))) {
+			ret = c.getInt(c.getColumnIndex("_id"));
+		}
+		Log.d(TAG, "imageUploadable " + fileSignature + " = " + ret);
+		c.close();
+		return ret;
+	}
+
 	private static IncomingImagesActivity observer = null;
 	
 	public void setImageObserver(IncomingImagesActivity observer) {
-		this.observer = observer;
+		DBAdapter.observer = observer;
 	}
 	
-	public long addImage(String fileSignature, Uri imageUri, String log, String name) {
+	public long registerNewImage(String fileSignature) {
 		ContentValues cv = new ContentValues();
 		cv.put("fileSignature", fileSignature);
-		cv.put("imageUri", imageUri.toString());
-		cv.put("log", log);
-		cv.put("received", System.currentTimeMillis());
-		cv.put("name", name);
-		Log.d(TAG, "adding image " + fileSignature + " with URI " + imageUri);
+		cv.put("updated", System.currentTimeMillis());
+		cv.put("status", 0);
+		Log.d(TAG, "registering new image " + fileSignature);
 		long ret = dbh.insertOrThrow(UPLOADS, null, cv);
 		if(observer != null)
 			observer.notifyImage();
-		return ret;
+		return ret;	
+	}
+	
+	public void receiveImage(long id, String name, String path, String log) {
+		ContentValues cv = new ContentValues();
+		cv.put("name", name);
+		cv.put("path", path);
+		cv.put("log", log);
+		cv.put("status", 1);
+		cv.put("updated", System.currentTimeMillis());
+		Log.d(TAG, "updating image " + id + ": " + name + " path " + path);
+		dbh.update(UPLOADS, cv, "_id = ?", new String[] { id + "" });
+		if(observer != null)
+			observer.notifyImage();
+	}
+	
+	public void finishImage(long id) {
+		ContentValues cv = new ContentValues();
+		cv.put("status", 2);
+		Log.d(TAG, "done with image " + id);
+		dbh.update(UPLOADS, cv, "_id = ?", new String[] { id + "" });
+		if(observer != null)
+			observer.notifyImage();		
 	}
 
 	public long addNewKeyWithMac(MacAddress mac, UploadKey key) {
@@ -108,8 +145,8 @@ public class DBAdapter extends SQLiteOpenHelper {
 	}
 	
 	public Cursor getUploads() {
-		Cursor c = dbh.query(UPLOADS, new String[] { "_id", "name", "received" }, 
-				null, null, null, null, "received DESC");
+		Cursor c = dbh.query(UPLOADS, new String[] { "_id", "name", "updated", "status" }, 
+				null, null, null, null, "updated DESC");
 		return c;
 	}
 	

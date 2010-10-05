@@ -3,6 +3,7 @@ package to.rcpt.fefi;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -44,6 +45,7 @@ import to.rcpt.fefi.util.MultipartInputStream;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.net.Uri;
+import android.os.Environment;
 import android.provider.MediaStore.MediaColumns;
 import android.provider.MediaStore.Images.Media;
 import android.util.Log;
@@ -112,11 +114,14 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		}
 		int offset = 0;
 		String filesignature = photoStatus.getParameter("filesignature");
-		if(db.imageExists(filesignature)) {
+		long id = db.imageExists(filesignature);
+		if(id != -1) {
 			Log.i(TAG, "image " + filesignature + " exists");
 			offset = 0;
-		} else
+		} else {
 			Log.i(TAG, "new image " + filesignature);
+			db.registerNewImage(filesignature);
+		}
 		// TODO: how to reject an image? offset presumably resumes upload;
 		// what's the point of fileid? oh - returned by client in upload
 		GetPhotoStatusResponse gpsr = new GetPhotoStatusResponse(photoStatus,
@@ -230,6 +235,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		String log = null;
 		String fileSignature = null;
 		String imageName = null;
+		File destinationPath = null;
+		long id = -1;
 		while(!headers.isEmpty()) {
 			String contentDisposition = headers.get("Content-Disposition");
 			if(contentDisposition == null)
@@ -265,9 +272,12 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 						}
 						fileSignature = uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE);
 						imageName = fileName;
-						boolean fileExists = db.imageExists(fileSignature);
-						Log.d(TAG, "image " + fileName + " has signature " + fileSignature + " exists " + fileExists);
-						if(!fileExists) {
+						// insist on having received a GetPhotoStatus first - which, unlike uploadPhoto, is authenticated
+						id = db.imageUploadable(fileSignature);
+						Log.d(TAG, "image " + fileName + " has signature " + fileSignature + " id " + id);
+						if(id != -1) {
+							destinationPath = new File(Environment.getExternalStorageDirectory(),
+									"eyefi/" + id + ".JPG");
 							ContentValues values = new ContentValues();
 							Date now = new Date();
 							DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(context.getApplicationContext());
@@ -305,7 +315,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		Log.d(TAG, " done with multipart input, have a uri " + uri);
 		if(uri != null) {
 			// we saved something; we should track it
-			db.addImage(fileSignature, uri, log, imageName);
+			db.receiveImage(id, imageName, destinationPath.toString(), log);
 		}
 		UploadPhotoResponse response = new UploadPhotoResponse(true);
 		sendResponseHeader(response);
