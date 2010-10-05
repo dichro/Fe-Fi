@@ -4,6 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -44,6 +45,9 @@ import to.rcpt.fefi.util.Hexstring;
 import to.rcpt.fefi.util.MultipartInputStream;
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Context;
+import android.media.MediaScannerConnection;
+import android.media.MediaScannerConnection.MediaScannerConnectionClient;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore.MediaColumns;
@@ -194,6 +198,52 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		sendResponseEntity(ssr);
 	}
 
+	private class MediaScannerNotifier implements MediaScannerConnectionClient {
+		public MediaScannerNotifier(String path, long id) {
+			_id = id;
+			_path = path;
+			_connection = new MediaScannerConnection(context, this);
+			_connection.connect();
+		}
+
+		public void onMediaScannerConnected() {
+			Log.d(TAG, "launching scanFile " + _path);
+			_connection.scanFile(_path, "image/jpeg");
+		}
+
+		public void onScanCompleted(String path, final Uri uri) {
+			Log.d(TAG, "done scanFile " + _path);
+			db.finishImage(_id);
+			_connection.disconnect();
+		}
+
+		private MediaScannerConnection _connection;
+		private String _path;
+		long _id;
+	}
+	
+	private void importPhoto(File file, String fileName, long id) {
+		Log.d(TAG, "importing " + fileName + " from " + file);
+		ContentValues values = new ContentValues();
+		Date now = new Date();
+		DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(context.getApplicationContext());
+		values.put(Media.DESCRIPTION, "Received by Fe-Fi on " + dateFormat.format(now));
+		values.put(Media.TITLE, fileName);
+		values.put(Media.MIME_TYPE, "image/jpeg");
+		values.put(Media.DATA, file.getAbsolutePath());
+		
+		File folder = file.getParentFile();
+		values.put(Media.BUCKET_ID,
+				folder.toString().toLowerCase().hashCode());
+		values.put(Media.BUCKET_DISPLAY_NAME,
+				folder.getName().toLowerCase());
+		
+		ContentResolver cr = context.getContentResolver();
+		Uri uri = cr.insert(Media.EXTERNAL_CONTENT_URI, values);
+		Log.d(TAG, "inserted values to uri " + uri);
+		new MediaScannerNotifier(file.getAbsolutePath(), id);
+	}
+	
 	public void uploadPhoto(HttpRequest request) 
 			throws HttpException, IOException {
 		Log.d(TAG, "upload " + request.toString());
@@ -278,18 +328,20 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 						if(id != -1) {
 							destinationPath = new File(Environment.getExternalStorageDirectory(),
 									"eyefi/" + id + ".JPG");
-							ContentValues values = new ContentValues();
-							Date now = new Date();
-							DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(context.getApplicationContext());
-							values.put(Media.DESCRIPTION, "Received by Fe-Fi on " + dateFormat.format(now));
-							values.put(Media.TITLE, fileName);
-							values.put(Media.MIME_TYPE, "image/jpeg");
-							values.put(MediaColumns.SIZE, (int)file.getSize());
-							ContentResolver cr = context.getContentResolver();
-							uri = cr.insert(Media.EXTERNAL_CONTENT_URI, values);
+							Log.d(TAG, "want to write " + imageName + "to " + destinationPath);
+//							ContentValues values = new ContentValues();
+//							Date now = new Date();
+//							DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(context.getApplicationContext());
+//							values.put(Media.DESCRIPTION, "Received by Fe-Fi on " + dateFormat.format(now));
+//							values.put(Media.TITLE, fileName);
+//							values.put(Media.MIME_TYPE, "image/jpeg");
+//							values.put(MediaColumns.SIZE, (int)file.getSize());
+//							ContentResolver cr = context.getContentResolver();
+//							uri = cr.insert(Media.EXTERNAL_CONTENT_URI, values);
 							try {
-								OutputStream out = cr.openOutputStream(uri);
-								Log.d(TAG, "shuffling image to " + uri);
+//								OutputStream out = cr.openOutputStream(uri);
+								OutputStream out = new FileOutputStream(destinationPath);
+								Log.d(TAG, "shuffling image to " + destinationPath);
 								long t1 = System.currentTimeMillis();
 								tarball.copyEntryContents(out);
 								out.close();
@@ -299,6 +351,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 							} catch(IOException e) {
 								Log.e(TAG, "IO fail " + e);
 							}
+							importPhoto(destinationPath, fileName, id);
 						} else
 							Log.e(TAG, "file exists!");
 					}
