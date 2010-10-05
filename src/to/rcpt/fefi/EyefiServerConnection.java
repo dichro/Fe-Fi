@@ -45,12 +45,10 @@ import to.rcpt.fefi.util.Hexstring;
 import to.rcpt.fefi.util.MultipartInputStream;
 import android.content.ContentResolver;
 import android.content.ContentValues;
-import android.content.Context;
 import android.media.MediaScannerConnection;
 import android.media.MediaScannerConnection.MediaScannerConnectionClient;
 import android.net.Uri;
 import android.os.Environment;
-import android.provider.MediaStore.MediaColumns;
 import android.provider.MediaStore.Images.Media;
 import android.util.Log;
 
@@ -365,12 +363,11 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			in.close();
 			headers = getHeaders(in, boundary);
 		}
-		Log.d(TAG, " done with multipart input, have a uri " + uri);
-		if(uri != null) {
-			// we saved something; we should track it
+		Log.d(TAG, " done with multipart input");
+		if(destinationPath != null)
 			db.receiveImage(id, imageName, destinationPath.toString(), log);
-		}
-		UploadPhotoResponse response = new UploadPhotoResponse(true);
+		boolean success = true;
+		UploadPhotoResponse response = new UploadPhotoResponse(success);
 		sendResponseHeader(response);
 		sendResponseEntity(response);
 	}
