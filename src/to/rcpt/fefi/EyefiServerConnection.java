@@ -162,7 +162,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				}
 			}
 		} catch (Exception e) {
-			// TODO: handle exception
+			e.printStackTrace();
 		}
 		
 	}
@@ -285,6 +285,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		String imageName = null;
 		File destinationPath = null;
 		long id = -1;
+		boolean success = false;
 		while(!headers.isEmpty()) {
 			String contentDisposition = headers.get("Content-Disposition");
 			if(contentDisposition == null)
@@ -324,20 +325,12 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 						id = db.imageUploadable(fileSignature);
 						Log.d(TAG, "image " + fileName + " has signature " + fileSignature + " id " + id);
 						if(id != -1) {
+							SettingsActivity.FefiPreferences prefs = new SettingsActivity.FefiPreferences(context);
 							destinationPath = new File(Environment.getExternalStorageDirectory(),
-									"eyefi/" + id + ".JPG");
+									"eyefi/" + prefs.getFolderName(new Date()) + "/" + id + ".JPG");
+							destinationPath.getParentFile().mkdirs();
 							Log.d(TAG, "want to write " + imageName + "to " + destinationPath);
-//							ContentValues values = new ContentValues();
-//							Date now = new Date();
-//							DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(context.getApplicationContext());
-//							values.put(Media.DESCRIPTION, "Received by Fe-Fi on " + dateFormat.format(now));
-//							values.put(Media.TITLE, fileName);
-//							values.put(Media.MIME_TYPE, "image/jpeg");
-//							values.put(MediaColumns.SIZE, (int)file.getSize());
-//							ContentResolver cr = context.getContentResolver();
-//							uri = cr.insert(Media.EXTERNAL_CONTENT_URI, values);
 							try {
-//								OutputStream out = cr.openOutputStream(uri);
 								OutputStream out = new FileOutputStream(destinationPath);
 								Log.d(TAG, "shuffling image to " + destinationPath);
 								long t1 = System.currentTimeMillis();
@@ -346,10 +339,11 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 								long t2 = System.currentTimeMillis();
 								long delta = t2 - t1;
 								Log.d(TAG, "done with " + uri + " copy after " + delta + " ms ");
+								importPhoto(destinationPath, fileName, id);
+								success = true;
 							} catch(IOException e) {
 								Log.e(TAG, "IO fail " + e);
 							}
-							importPhoto(destinationPath, fileName, id);
 						} else
 							Log.e(TAG, "file exists!");
 					}
@@ -366,7 +360,6 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		Log.d(TAG, " done with multipart input");
 		if(destinationPath != null)
 			db.receiveImage(id, imageName, destinationPath.toString(), log);
-		boolean success = true;
 		UploadPhotoResponse response = new UploadPhotoResponse(success);
 		sendResponseHeader(response);
 		sendResponseEntity(response);

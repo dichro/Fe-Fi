@@ -6,4 +6,9 @@
 
 
 <string name="upload_key_supplemental">The upload key can be usually found on the computer where you originally activated your Eye-Fi card, in the file C:\\Documents and Settings\\[User]\\Application Data\\Eye-Fi\\Settings.xml</string>
+<string name="folder_prompt">Save pictures to...</string>
+<string-array name="folder_items"><item>All in one folder</item>
+<item>One folder per month</item>
+<item>One folder per day</item>
+</string-array>
 </resources>

@@ -18,7 +18,9 @@
 <activity android:name="EyefiCardListActivity"></activity>
 <activity android:name="IncomingImagesActivity"></activity>
 <activity android:name="EyefiCardScanActivity"></activity>
+<activity android:name="SettingsActivity"></activity>
 <service android:name="EyefiReceiverService"></service>
+
 </application>
 
 

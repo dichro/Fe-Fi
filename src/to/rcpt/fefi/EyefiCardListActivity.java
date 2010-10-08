@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.os.PowerManager;
 import android.util.Log;
 import android.view.ContextMenu;
+import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -72,12 +73,13 @@ public class EyefiCardListActivity extends ListActivity implements OnClickListen
 		}
     }
     
+	@Override
 	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo info) {
 		super.onCreateContextMenu(menu, v, info);
 		MenuInflater inflater = getMenuInflater();
 		inflater.inflate(R.layout.card_control_item_menu, menu);
 	}
-	
+		
 	public class CardDeleter implements DialogInterface.OnClickListener {
 		private int cardId;
 		
@@ -90,6 +92,7 @@ public class EyefiCardListActivity extends ListActivity implements OnClickListen
 			c.requery();
 		}
 	}
+	
 	
 	protected Dialog onCreateDialog(int id) {
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -116,6 +119,28 @@ public class EyefiCardListActivity extends ListActivity implements OnClickListen
 		default:
 			return super.onContextItemSelected(item);
 		}
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		super.onCreateOptionsMenu(menu);
+		Log.d(TAG, "creating menu");
+		MenuInflater inflater = getMenuInflater();
+		inflater.inflate(R.layout.card_control_options, menu);
+		return true;
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+	    // Handle item selection
+	    switch (item.getItemId()) {
+	    case R.id.settings:
+	        Intent i = new Intent().setClass(this, SettingsActivity.class);
+			startActivity(i);
+	        return true;
+	    default:
+	        return super.onOptionsItemSelected(item);
+	    }
 	}
 
 	private void launchEditActivity(long id) {
