@@ -46,14 +46,6 @@ public class EyefiCardListActivity extends ListActivity implements OnClickListen
 				startActivityForResult(i, 0);
 			}
 		});
-        b = (Button)findViewById(R.id.buy_button);
-        b.setOnClickListener(new OnClickListener() {		
-			public void onClick(View v) {
-				Intent i = new Intent().setAction(Intent.ACTION_VIEW);
-				i.setData(Uri.parse("http://eyefi.tellapal.com/a/clk/8rl5j"));
-				startActivity(i);
-			}
-		});
         db = DBAdapter.make(this);
         c = db.getCards();
         startManagingCursor(c);
@@ -124,7 +116,6 @@ public class EyefiCardListActivity extends ListActivity implements OnClickListen
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		super.onCreateOptionsMenu(menu);
-		Log.d(TAG, "creating menu");
 		MenuInflater inflater = getMenuInflater();
 		inflater.inflate(R.layout.card_control_options, menu);
 		return true;
@@ -132,10 +123,11 @@ public class EyefiCardListActivity extends ListActivity implements OnClickListen
 	
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
+		Intent i;
 	    // Handle item selection
 	    switch (item.getItemId()) {
 	    case R.id.settings:
-	        Intent i = new Intent().setClass(this, SettingsActivity.class);
+	        i = new Intent().setClass(this, SettingsActivity.class);
 			startActivity(i);
 	        return true;
 	    default:
