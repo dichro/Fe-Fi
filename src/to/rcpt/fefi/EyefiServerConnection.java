@@ -63,7 +63,6 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	
 	public static EyefiServerConnection makeConnection(EyefiReceiverService c, Socket s) throws IOException {
 		s.setReceiveBufferSize(256 * 1024);
-		Log.d(TAG, "recv buffer size " + s.getReceiveBufferSize());
 		EyefiServerConnection me = new EyefiServerConnection(c);
 		BasicHttpParams params = new BasicHttpParams();
 		params.setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE, 256 * 1024);
@@ -279,7 +278,6 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		in.close();
 		Map<String, String> headers = getHeaders(in, boundary);
 		UploadPhoto uploadPhoto = null;
-		Uri uri = null;
 		String log = null;
 		String fileSignature = null;
 		String imageName = null;
@@ -329,7 +327,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 							destinationPath = new File(Environment.getExternalStorageDirectory(),
 									"eyefi/" + prefs.getFolderName(new Date()) + "/" + id + ".JPG");
 							destinationPath.getParentFile().mkdirs();
-							Log.d(TAG, "want to write " + imageName + "to " + destinationPath);
+							Log.d(TAG, "want to write " + imageName + " to " + destinationPath);
 							try {
 								OutputStream out = new FileOutputStream(destinationPath);
 								Log.d(TAG, "shuffling image to " + destinationPath);
@@ -338,14 +336,16 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 								out.close();
 								long t2 = System.currentTimeMillis();
 								long delta = t2 - t1;
-								Log.d(TAG, "done with " + uri + " copy after " + delta + " ms ");
+								Log.d(TAG, "done with copy after " + delta + " ms ");
 								importPhoto(destinationPath, fileName, id);
 								success = true;
 							} catch(IOException e) {
 								Log.e(TAG, "IO fail " + e);
 							}
-						} else
-							Log.e(TAG, "file exists!");
+						} else {
+							success = true;
+							Log.e(TAG, "file exists, ignoring upload but faking success!");
+						}
 					}
 					Log.d(TAG, "skipping to next entry");
 					file = tarball.getNextEntry();
@@ -353,6 +353,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				UploadKey uploadKey = getKeyForMac(uploadPhoto.getMacAddress());
 				Hexstring integrityDigest = checksum.getValue(uploadKey);
 				Log.d(TAG, "calculated digest " + integrityDigest);
+				// TODO: check integrity?
 			}
 			in.close();
 			headers = getHeaders(in, boundary);
