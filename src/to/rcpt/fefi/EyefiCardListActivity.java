@@ -21,6 +21,7 @@ import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.SimpleCursorAdapter;
+import android.widget.Toast;
 import android.widget.ToggleButton;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
@@ -32,10 +33,8 @@ public class EyefiCardListActivity extends ListActivity implements OnClickListen
 	private SimpleCursorAdapter adapter;
 	private ToggleButton button;
 	private Intent serviceIntent;
-	private PowerManager.WakeLock wakeLock;
 	private SharedPreferences preferences;
 	
-
 	public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.card_control);
@@ -56,8 +55,6 @@ public class EyefiCardListActivity extends ListActivity implements OnClickListen
 		button = (ToggleButton) findViewById(R.id.enable_service);
 		button.setOnClickListener(this);
 		serviceIntent = new Intent(this, EyefiReceiverService.class);
-		PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-		wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "Fe-Fi");
 		preferences = getPreferences(MODE_PRIVATE);
 		if(preferences.getBoolean(ENABLE_SERVICE, false)) {
 			button.setChecked(true);
@@ -143,7 +140,6 @@ public class EyefiCardListActivity extends ListActivity implements OnClickListen
 	
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
     	if(data != null) {
-    		Log.d("foo", "got req " + requestCode + " res " + resultCode + " inte " + data + " mac " + data.getStringExtra("mac"));
     		launchEditActivity(data.getLongExtra("id", -1));
     	}
     }
@@ -164,13 +160,11 @@ public class EyefiCardListActivity extends ListActivity implements OnClickListen
 
 	private void stopReceiver() {
 		preferences.edit().putBoolean(ENABLE_SERVICE, false).commit();
-		wakeLock.release();
 		stopService(serviceIntent);
 	}
 
 	private void startReceiver() {
 		preferences.edit().putBoolean(ENABLE_SERVICE, true).commit();
 		startService(serviceIntent);
-		wakeLock.acquire();
 	}
 }
