@@ -22,6 +22,23 @@ public class EyefiReceiverService extends Service implements Runnable {
 	private PowerManager.WakeLock wakeLock;
 
 	public void run() {
+		Log.d(TAG, "Connecting to database");
+		db = DBAdapter.make(this);
+		Log.d(TAG, "Opening incoming port");
+		while (eyefiSocket == null) {
+			try {
+				eyefiSocket = new ServerSocket(59278);
+				eyefiSocket.setReuseAddress(true);
+			} catch (IOException e) {
+				Log.d(TAG, "Failed to open port, sleeping before retry");
+				e.printStackTrace();
+			}
+			try {
+				Thread.currentThread().sleep(1000);
+			} catch (InterruptedException e) {
+			}
+		}
+		Log.d(TAG, "Listening on incoming port");
 		while (!eyefiSocket.isClosed()) { // .isBound() remains true after closing?
 			try {
 				Socket eyefiClient = eyefiSocket.accept();
@@ -42,17 +59,7 @@ public class EyefiReceiverService extends Service implements Runnable {
 		PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 		wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "Fe-Fi");
 		wakeLock.acquire();
-		try {
-			// TODO: retry below to avoid NPE
-			// in fact, just move all the below (with retry for network, but including DB.make
-			// into start of run()
-			eyefiSocket = new ServerSocket(59278);
-			eyefiSocket.setReuseAddress(true);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 		new Thread(this).start();
-		db = DBAdapter.make(this);
 	}
 	
 	private EyefiCardScanActivity testKeyHelper = null;
