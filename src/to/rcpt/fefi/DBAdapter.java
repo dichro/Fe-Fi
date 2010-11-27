@@ -112,10 +112,11 @@ public class DBAdapter extends SQLiteOpenHelper {
 			observer.notifyImage();
 	}
 	
-	public void finishImage(long id) {
+	public void finishImage(long id, Uri uri) {
 		ContentValues cv = new ContentValues();
 		cv.put("status", 2);
-		Log.d(TAG, "done with image " + id);
+		cv.put("imageUri", uri.toString());
+		Log.d(TAG, "done with image " + id + "@" + uri.toString());
 		dbh.update(UPLOADS, cv, "_id = ?", new String[] { id + "" });
 		if(observer != null)
 			observer.notifyImage();		
@@ -145,7 +146,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 	}
 	
 	public Cursor getUploads() {
-		Cursor c = dbh.query(UPLOADS, new String[] { "_id", "name", "updated", "status" }, 
+		Cursor c = dbh.query(UPLOADS, new String[] { "_id", "name", "updated", "status", "imageUri" }, 
 				null, null, null, null, "updated DESC");
 		return c;
 	}
