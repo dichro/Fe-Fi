@@ -319,32 +319,32 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 						}
 						fileSignature = uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE);
 						imageName = fileName;
-						// insist on having received a GetPhotoStatus first - which, unlike uploadPhoto, is authenticated
-						id = db.imageUploadable(fileSignature);
-						Log.d(TAG, "image " + fileName + " has signature " + fileSignature + " id " + id);
-						if(id != -1) {
+						try {
+							id = db.imageUploadable(fileSignature);
+							Log.d(TAG, "image " + fileName + " has signature " + fileSignature + " id " + id);
 							SettingsActivity.FefiPreferences prefs = new SettingsActivity.FefiPreferences(context);
 							destinationPath = new File(Environment.getExternalStorageDirectory(),
 									"eyefi/" + prefs.getFolderName(new Date()) + "/" + id + ".JPG");
 							destinationPath.getParentFile().mkdirs();
 							Log.d(TAG, "want to write " + imageName + " to " + destinationPath);
-							try {
-								OutputStream out = new FileOutputStream(destinationPath);
-								Log.d(TAG, "shuffling image to " + destinationPath);
-								long t1 = System.currentTimeMillis();
-								tarball.copyEntryContents(out);
-								out.close();
-								long t2 = System.currentTimeMillis();
-								long delta = t2 - t1;
-								Log.d(TAG, "done with copy after " + delta + " ms ");
-								importPhoto(destinationPath, fileName, id);
-								success = true;
-							} catch(IOException e) {
-								Log.e(TAG, "IO fail " + e);
-							}
-						} else {
+							OutputStream out = new FileOutputStream(
+									destinationPath);
+							Log.d(TAG, "shuffling image to " + destinationPath);
+							long t1 = System.currentTimeMillis();
+							tarball.copyEntryContents(out);
+							out.close();
+							long t2 = System.currentTimeMillis();
+							long delta = t2 - t1;
+							Log.d(TAG, "done with copy after " + delta + " ms ");
+							importPhoto(destinationPath, fileName, id);
 							success = true;
+						} catch(IOException e) {
+							Log.e(TAG, "IO fail " + e);						
+						} catch(DBAdapter.DuplicateUpload e) {
 							Log.e(TAG, "file exists, ignoring upload but faking success!");
+							success = true;
+						} catch(DBAdapter.UnknownUpload e) {
+							Log.e(TAG, "unknown upload! " + uploadPhoto);
 						}
 					}
 					Log.d(TAG, "skipping to next entry");

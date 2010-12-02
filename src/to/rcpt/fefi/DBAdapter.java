@@ -69,16 +69,29 @@ public class DBAdapter extends SQLiteOpenHelper {
 		return ret;
 	}
 	
-	public long imageUploadable(String fileSignature) {
+	public class DuplicateUpload extends Exception {
+		private static final long serialVersionUID = 1398625861214657407L;
+		
+	}
+	
+	public class UnknownUpload extends Exception {
+		private static final long serialVersionUID = -5382003423698828649L;		
+	}
+	
+	public long imageUploadable(String fileSignature) throws DuplicateUpload, UnknownUpload {
 		Cursor c = dbh.query(UPLOADS, new String[] { "_id", "status" }, "fileSignature = ?", 
 				new String[] { fileSignature }, null, null, null);
-		long ret = -1;
-		if(c.moveToFirst() && (0 == c.getInt(c.getColumnIndex("status")))) {
-			ret = c.getInt(c.getColumnIndex("_id"));
+		try {
+			if(!c.moveToFirst())
+				throw new UnknownUpload();
+
+			if(0 != c.getInt(c.getColumnIndex("status")))
+				throw new DuplicateUpload();
+			
+			return c.getInt(c.getColumnIndex("_id"));
+		} finally {
+			c.close();
 		}
-		Log.d(TAG, "imageUploadable " + fileSignature + " = " + ret);
-		c.close();
-		return ret;
 	}
 
 	private static IncomingImagesActivity observer = null;

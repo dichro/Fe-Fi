@@ -14,13 +14,7 @@ import android.util.Xml;
 public class GetPhotoStatus extends EyefiMessage {
 	public static final String TAG = "GetPhotoStatus";
 	public void parse(InputStream is) {
-		setupParser("GetPhotoStatus");
-		
-		try {
-			Xml.parse(is, Xml.Encoding.UTF_8, soapEnvelope.getContentHandler());
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+		parse("GetPhotoStatus", is);
 	}
 	
 	public void authenticate(UploadKey uploadKey, ServerNonce serverNonce) {

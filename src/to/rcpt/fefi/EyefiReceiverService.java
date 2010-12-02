@@ -14,7 +14,6 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
-import android.widget.Toast;
 
 public class EyefiReceiverService extends Service implements Runnable {
 	private ServerSocket eyefiSocket;
@@ -34,7 +33,7 @@ public class EyefiReceiverService extends Service implements Runnable {
 				e.printStackTrace();
 			}
 			try {
-				Thread.currentThread().sleep(1000);
+				Thread.sleep(1000);
 			} catch (InterruptedException e) {
 			}
 		}

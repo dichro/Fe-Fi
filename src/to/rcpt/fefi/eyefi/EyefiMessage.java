@@ -1,5 +1,11 @@
 package to.rcpt.fefi.eyefi;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.HashMap;
 
 import to.rcpt.fefi.eyefi.Types.MacAddress;
@@ -8,9 +14,12 @@ import android.sax.Element;
 import android.sax.EndTextElementListener;
 import android.sax.RootElement;
 import android.util.Log;
+import android.util.Xml;
 
 public class EyefiMessage {
 	private static String TAG = "EyefiMessage";
+	private String name = "EyefiMessage";
+	private String content = "";
 
 	class ContentSnatcher implements EndTextElementListener {
 		String key;
@@ -62,5 +71,31 @@ public class EyefiMessage {
 
 	public MacAddress getMacAddress() {
 		return new MacAddress(getParameter(MACADDRESS));
+	}
+	
+	@Override
+	public String toString() {
+		return name + ": " + content;
+	}
+	
+	public void parse(String type, InputStream is) {
+		setupParser(type);
+		name = type;
+		
+		try {
+			Writer writer = new StringWriter();
+			Reader reader = new BufferedReader(new InputStreamReader(is));
+			char tmp[] = new char[1024]; // ugh
+			int n;
+			
+			while((n = reader.read(tmp)) != -1)
+				writer.write(tmp, 0, n);
+			content = writer.toString();
+			
+			Log.d(TAG, "parsing " + type + " from " + content);
+			Xml.parse(content, soapEnvelope.getContentHandler());
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 }

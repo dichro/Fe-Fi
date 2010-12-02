@@ -13,7 +13,6 @@ import android.view.View;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
-import android.widget.Toast;
 
 public class IncomingImagesActivity extends ListActivity {
 	private static final String IMAGES_UPDATED = "updated";
