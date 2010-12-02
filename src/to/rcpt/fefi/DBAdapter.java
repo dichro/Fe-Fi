@@ -83,7 +83,8 @@ public class DBAdapter extends SQLiteOpenHelper {
 				new String[] { fileSignature }, null, null, null);
 		try {
 			if(!c.moveToFirst())
-				throw new UnknownUpload();
+				return registerNewImage(fileSignature);
+//				throw new UnknownUpload();
 
 			if(0 != c.getInt(c.getColumnIndex("status")))
 				throw new DuplicateUpload();
