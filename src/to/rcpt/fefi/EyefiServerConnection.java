@@ -320,7 +320,15 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 						fileSignature = uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE);
 						imageName = fileName;
 						try {
-							id = db.imageUploadable(fileSignature);
+							try {
+								id = db.imageUploadable(fileSignature);
+							} catch(DBAdapter.UnknownUpload e) {
+								// some (?) X2 cards have oddness and duplicity in UploadPhoto:filesignature. Fake one up.
+								fileSignature = fileSignature + ":" + fileName;
+								Log.d(TAG, "inexplicably unknown filesignature. X2 card? Faking one up as " + fileSignature);
+								db.registerNewImage(fileSignature);
+								id = db.imageUploadable(fileSignature);								
+							}
 							Log.d(TAG, "image " + fileName + " has signature " + fileSignature + " id " + id);
 							SettingsActivity.FefiPreferences prefs = new SettingsActivity.FefiPreferences(context);
 							destinationPath = new File(Environment.getExternalStorageDirectory(),
