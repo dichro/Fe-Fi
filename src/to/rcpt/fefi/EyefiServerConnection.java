@@ -241,6 +241,17 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		new MediaScannerNotifier(file.getAbsolutePath(), id);
 	}
 	
+	private void copyToLocalFile(TarInputStream tarball, File destination) throws IOException {
+		OutputStream out = new FileOutputStream(destination);
+		Log.d(TAG, "shuffling data to " + destination);
+		long t1 = System.currentTimeMillis();
+		tarball.copyEntryContents(out);
+		out.close();
+		long t2 = System.currentTimeMillis();
+		long delta = t2 - t1;
+		Log.d(TAG, "done with copy after " + delta + " ms ");
+	}
+	
 	public void uploadPhoto(HttpRequest request) 
 			throws HttpException, IOException {
 		Log.d(TAG, "upload " + request.toString());
@@ -278,7 +289,6 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		in.close();
 		Map<String, String> headers = getHeaders(in, boundary);
 		UploadPhoto uploadPhoto = null;
-		String log = null;
 		String fileSignature = null;
 		String imageName = null;
 		File destinationPath = null;
@@ -308,9 +318,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 					String fileName = file.getName();
 					if(fileName.endsWith(".log")) {
 						Log.d(TAG, "Found logfile " + fileName);
-						ByteArrayOutputStream out = new ByteArrayOutputStream();
-						tarball.copyEntryContents(out);
-						log = out.toString();
+						File destination = openWritableFile(id, "log");
+						copyToLocalFile(tarball, destination);
 					} else {
 						Log.d(TAG, "Processing image file " + fileName);
 						if(uploadPhoto == null) {
@@ -323,20 +332,10 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 						id = db.imageUploadable(fileSignature);
 						Log.d(TAG, "image " + fileName + " has signature " + fileSignature + " id " + id);
 						if(id != -1) {
-							SettingsActivity.FefiPreferences prefs = new SettingsActivity.FefiPreferences(context);
-							destinationPath = new File(Environment.getExternalStorageDirectory(),
-									"eyefi/" + prefs.getFolderName(new Date()) + "/" + id + ".JPG");
-							destinationPath.getParentFile().mkdirs();
+							destinationPath = openWritableFile(id, "JPG");
 							Log.d(TAG, "want to write " + imageName + " to " + destinationPath);
 							try {
-								OutputStream out = new FileOutputStream(destinationPath);
-								Log.d(TAG, "shuffling image to " + destinationPath);
-								long t1 = System.currentTimeMillis();
-								tarball.copyEntryContents(out);
-								out.close();
-								long t2 = System.currentTimeMillis();
-								long delta = t2 - t1;
-								Log.d(TAG, "done with copy after " + delta + " ms ");
+								copyToLocalFile(tarball, destinationPath);
 								importPhoto(destinationPath, fileName, id);
 								success = true;
 							} catch(IOException e) {
@@ -360,10 +359,19 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		}
 		Log.d(TAG, " done with multipart input");
 		if(destinationPath != null)
-			db.receiveImage(id, imageName, destinationPath.toString(), log);
+			db.receiveImage(id, imageName, destinationPath.toString());
 		UploadPhotoResponse response = new UploadPhotoResponse(success);
 		sendResponseHeader(response);
 		sendResponseEntity(response);
+	}
+
+	private File openWritableFile(long id, String suffix) {
+		File destinationPath;
+		SettingsActivity.FefiPreferences prefs = new SettingsActivity.FefiPreferences(context);
+		destinationPath = new File(Environment.getExternalStorageDirectory(),
+				"eyefi/" + prefs.getFolderName(new Date()) + "/" + id + "." + suffix);
+		destinationPath.getParentFile().mkdirs();
+		return destinationPath;
 	}
 
 	public Map<String, String> getHeaders(MultipartInputStream in, String boundary) 

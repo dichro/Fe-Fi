@@ -1,5 +1,7 @@
 package to.rcpt.fefi;
 
+import java.io.IOException;
+
 import to.rcpt.fefi.eyefi.Types.MacAddress;
 import to.rcpt.fefi.eyefi.Types.UploadKey;
 import android.content.ContentValues;
@@ -21,6 +23,19 @@ public class DBAdapter extends SQLiteOpenHelper {
 	public static DBAdapter make(Context c) {
 		DBAdapter adapter = new DBAdapter(c);
 		adapter.dbh = adapter.getWritableDatabase();
+		try {
+			String cmd = "/system/bin/chmod 0664 " + adapter.dbh.getPath();
+			Log.d(TAG, "trying " + cmd);
+			Process p = Runtime.getRuntime().exec(cmd);
+			Log.d(TAG, "waiting");
+			p.waitFor();
+			Log.d(TAG, "done");
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		return adapter;
 	}
 	
@@ -99,11 +114,10 @@ public class DBAdapter extends SQLiteOpenHelper {
 		return ret;	
 	}
 	
-	public void receiveImage(long id, String name, String path, String log) {
+	public void receiveImage(long id, String name, String path) {
 		ContentValues cv = new ContentValues();
 		cv.put("name", name);
 		cv.put("path", path);
-		cv.put("log", log);
 		cv.put("status", 1);
 		cv.put("updated", System.currentTimeMillis());
 		Log.d(TAG, "updating image " + id + ": " + name + " path " + path);
