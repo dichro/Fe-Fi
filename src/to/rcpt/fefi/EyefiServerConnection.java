@@ -328,22 +328,29 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 						}
 						fileSignature = uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE);
 						imageName = fileName;
-						// insist on having received a GetPhotoStatus first - which, unlike uploadPhoto, is authenticated
-						id = db.imageUploadable(fileSignature);
-						Log.d(TAG, "image " + fileName + " has signature " + fileSignature + " id " + id);
-						if(id != -1) {
+						try {
+							try {
+								id = db.imageUploadable(fileSignature);
+							} catch(DBAdapter.UnknownUpload e) {
+								// some (?) X2 cards have oddness and duplicity in UploadPhoto:filesignature. Fake one up.
+								fileSignature = fileSignature + ":" + fileName;
+								Log.d(TAG, "inexplicably unknown filesignature. X2 card? Faking one up as " + fileSignature);
+								db.registerNewImage(fileSignature);
+								id = db.imageUploadable(fileSignature);								
+							}
+							Log.d(TAG, "image " + fileName + " has signature " + fileSignature + " id " + id);
 							destinationPath = openWritableFile(id, "JPG");
 							Log.d(TAG, "want to write " + imageName + " to " + destinationPath);
-							try {
-								copyToLocalFile(tarball, destinationPath);
-								importPhoto(destinationPath, fileName, id);
-								success = true;
-							} catch(IOException e) {
-								Log.e(TAG, "IO fail " + e);
-							}
-						} else {
+							copyToLocalFile(tarball, destinationPath);
+							importPhoto(destinationPath, fileName, id);
 							success = true;
+						} catch(IOException e) {
+							Log.e(TAG, "IO fail " + e);						
+						} catch(DBAdapter.DuplicateUpload e) {
 							Log.e(TAG, "file exists, ignoring upload but faking success!");
+							success = true;
+						} catch(DBAdapter.UnknownUpload e) {
+							Log.e(TAG, "unknown upload! " + uploadPhoto);
 						}
 					}
 					Log.d(TAG, "skipping to next entry");
