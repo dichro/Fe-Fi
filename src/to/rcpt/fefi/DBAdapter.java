@@ -23,19 +23,19 @@ public class DBAdapter extends SQLiteOpenHelper {
 	public static DBAdapter make(Context c) {
 		DBAdapter adapter = new DBAdapter(c);
 		adapter.dbh = adapter.getWritableDatabase();
-		try {
-			String cmd = "/system/bin/chmod 0664 " + adapter.dbh.getPath();
-			Log.d(TAG, "trying " + cmd);
-			Process p = Runtime.getRuntime().exec(cmd);
-			Log.d(TAG, "waiting");
-			p.waitFor();
-			Log.d(TAG, "done");
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//		try {
+//			String cmd = "/system/bin/chmod 0664 " + adapter.dbh.getPath();
+//			Log.d(TAG, "trying " + cmd);
+//			Process p = Runtime.getRuntime().exec(cmd);
+//			Log.d(TAG, "waiting");
+//			p.waitFor();
+//			Log.d(TAG, "done");
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		return adapter;
 	}
 	
