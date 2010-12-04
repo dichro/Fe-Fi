@@ -1,5 +1,8 @@
 package to.rcpt.fefi;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 
 import to.rcpt.fefi.eyefi.Types.MacAddress;
@@ -40,7 +43,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 	}
 	
 	protected DBAdapter(Context c) {
-		super(c, "FeFi", null, 1);
+		super(c, "FeFi", null, 2);
 	}
 	
 	@Override
@@ -68,8 +71,50 @@ public class DBAdapter extends SQLiteOpenHelper {
 	}
 
 	@Override
-	public void onUpgrade(SQLiteDatabase arg0, int arg1, int arg2) {
-		Log.e(TAG, "upgrade requested from " + arg1 + " to " + arg2);
+	public void onUpgrade(SQLiteDatabase db, int arg1, int arg2) {
+		Log.e(TAG, "db upgrade requested from " + arg1 + " to " + arg2);
+		db.beginTransaction();
+		Cursor c = db.query(UPLOADS, new String[] { "path", "log" }, "log IS NOT NULL", null, null, null, null);
+		int pathindex = c.getColumnIndex("path");
+		int logindex = c.getColumnIndex("log");
+		try {
+			if (!c.moveToFirst())
+				return;
+			do {
+				String path = c.getString(pathindex);
+				String log = c.getString(logindex);
+				Log.d(TAG, "Image " + path + " has " + log.length() + " byte log");
+				if(!path.endsWith("JPG"))
+					throw new RuntimeException("don't know what to do with path " + path);
+				String logpath = path.replace("JPG", "log");
+				File f = new File(logpath);
+				if(f.exists()) {
+					if(f.length() > log.length())
+						throw new RuntimeException("Image " + path + " has a log file " + f.length() + 
+								" which is longer than desired log " + log.length());
+					if(f.length() == log.length())
+						continue;
+				}
+				Log.d(TAG, "writing log to " + logpath);
+				FileWriter out = new FileWriter(logpath, false);
+				out.write(log);
+				out.close();
+			} while(c.moveToNext());
+			c.close();
+			Log.d(TAG, "log writeouts complete, nulling column in database");
+			ContentValues cv = new ContentValues();
+			cv.putNull("log");
+			int updated = db.update(UPLOADS, cv, "log IS NOT NULL", null);
+			Log.d(TAG, "updated " + updated + " rows");
+			db.setTransactionSuccessful();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		} finally {
+			if(!c.isClosed())
+				c.close();
+			db.endTransaction();
+			Log.d(TAG, "transaction committed");
+		}
 	}
 	
 	public long imageExists(String fileSignature) {
