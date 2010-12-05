@@ -1,7 +1,6 @@
 package to.rcpt.fefi;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 
@@ -24,10 +23,10 @@ public class DBAdapter extends SQLiteOpenHelper {
 	private static final String[] idColumns = { "_id" };
 	
 	public static DBAdapter make(Context c) {
-		DBAdapter adapter = new DBAdapter(c);
-		adapter.dbh = adapter.getWritableDatabase();
 //		try {
-//			String cmd = "/system/bin/chmod 0664 " + adapter.dbh.getPath();
+////			String cmd = "/system/bin/chmod 0666 " + adapter.dbh.getPath();
+////			String cmd = "/system/bin/chmod 0771 /data/data/to.rcpt.fefi/databases";
+//			String cmd = "/system/bin/chmod 0660 /data/data/to.rcpt.fefi/databases/FeFi";
 //			Log.d(TAG, "trying " + cmd);
 //			Process p = Runtime.getRuntime().exec(cmd);
 //			Log.d(TAG, "waiting");
@@ -39,6 +38,8 @@ public class DBAdapter extends SQLiteOpenHelper {
 //			// TODO Auto-generated catch block
 //			e.printStackTrace();
 //		}
+		DBAdapter adapter = new DBAdapter(c);
+		adapter.dbh = adapter.getWritableDatabase();
 		return adapter;
 	}
 	
@@ -92,8 +93,10 @@ public class DBAdapter extends SQLiteOpenHelper {
 					if(f.length() > log.length())
 						throw new RuntimeException("Image " + path + " has a log file " + f.length() + 
 								" which is longer than desired log " + log.length());
-					if(f.length() == log.length())
+					if(f.length() == log.length()) {
+						Log.d(TAG, "Log already exists, continuing");
 						continue;
+					}
 				}
 				Log.d(TAG, "writing log to " + logpath);
 				FileWriter out = new FileWriter(logpath, false);
@@ -115,6 +118,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 			db.endTransaction();
 			Log.d(TAG, "transaction committed");
 		}
+		Log.d(TAG, "upgrade complete");
 	}
 	
 	public long imageExists(String fileSignature) {
