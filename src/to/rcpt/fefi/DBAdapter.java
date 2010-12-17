@@ -3,6 +3,8 @@ package to.rcpt.fefi;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 
 import to.rcpt.fefi.eyefi.Types.MacAddress;
 import to.rcpt.fefi.eyefi.Types.UploadKey;
@@ -19,6 +21,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 	private static final String CARDS = "cameras";
 	private static final String TAG = "DBAdapter";
 	protected SQLiteDatabase dbh;
+	private Context context;
 	
 	private static final String[] idColumns = { "_id" };
 	
@@ -44,7 +47,8 @@ public class DBAdapter extends SQLiteOpenHelper {
 	}
 	
 	protected DBAdapter(Context c) {
-		super(c, "FeFi", null, 2);
+		super(c, "FeFi", null, 3);
+		context = c;
 	}
 	
 	@Override
@@ -74,50 +78,64 @@ public class DBAdapter extends SQLiteOpenHelper {
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int arg1, int arg2) {
 		Log.e(TAG, "db upgrade requested from " + arg1 + " to " + arg2);
-		db.beginTransaction();
-		Cursor c = db.query(UPLOADS, new String[] { "path", "log" }, "log IS NOT NULL", null, null, null, null);
-		int pathindex = c.getColumnIndex("path");
-		int logindex = c.getColumnIndex("log");
-		try {
-			if (!c.moveToFirst())
-				return;
-			do {
-				String path = c.getString(pathindex);
-				String log = c.getString(logindex);
-				Log.d(TAG, "Image " + path + " has " + log.length() + " byte log");
-				if(!path.endsWith("JPG"))
-					throw new RuntimeException("don't know what to do with path " + path);
-				String logpath = path.replace("JPG", "log");
-				File f = new File(logpath);
-				if(f.exists()) {
-					if(f.length() > log.length())
-						throw new RuntimeException("Image " + path + " has a log file " + f.length() + 
-								" which is longer than desired log " + log.length());
-					if(f.length() == log.length()) {
-						Log.d(TAG, "Log already exists, continuing");
-						continue;
+		if ((arg1 <= 1) && (arg2 >= 2)) {
+			Log.d(TAG, "migrating log data to sdcard");
+			db.beginTransaction();
+			Cursor c = db.query(UPLOADS, new String[] { "path", "log" },
+					"log IS NOT NULL", null, null, null, null);
+			int pathindex = c.getColumnIndex("path");
+			int logindex = c.getColumnIndex("log");
+			try {
+				if (!c.moveToFirst())
+					return;
+				do {
+					String path = c.getString(pathindex);
+					String log = c.getString(logindex);
+					Log.d(TAG, "Image " + path + " has " + log.length()
+							+ " byte log");
+					if (!path.endsWith("JPG"))
+						throw new RuntimeException(
+								"don't know what to do with path " + path);
+					String logpath = path.replace("JPG", "log");
+					File f = new File(logpath);
+					if (f.exists()) {
+						if (f.length() > log.length())
+							throw new RuntimeException("Image " + path
+									+ " has a log file " + f.length()
+									+ " which is longer than desired log "
+									+ log.length());
+						if (f.length() == log.length()) {
+							Log.d(TAG, "Log already exists, continuing");
+							continue;
+						}
 					}
-				}
-				Log.d(TAG, "writing log to " + logpath);
-				FileWriter out = new FileWriter(logpath, false);
-				out.write(log);
-				out.close();
-			} while(c.moveToNext());
-			c.close();
-			Log.d(TAG, "log writeouts complete, nulling column in database");
-			ContentValues cv = new ContentValues();
-			cv.putNull("log");
-			int updated = db.update(UPLOADS, cv, "log IS NOT NULL", null);
-			Log.d(TAG, "updated " + updated + " rows");
-			db.setTransactionSuccessful();
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		} finally {
-			if(!c.isClosed())
+					Log.d(TAG, "writing log to " + logpath);
+					FileWriter out = new FileWriter(logpath, false);
+					out.write(log);
+					out.close();
+				} while (c.moveToNext());
 				c.close();
-			db.endTransaction();
-			Log.d(TAG, "transaction committed");
+				Log
+						.d(TAG,
+								"log writeouts complete, nulling column in database");
+				ContentValues cv = new ContentValues();
+				cv.putNull("log");
+				int updated = db.update(UPLOADS, cv, "log IS NOT NULL", null);
+				Log.d(TAG, "updated " + updated + " rows");
+				db.setTransactionSuccessful();
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			} finally {
+				if (!c.isClosed())
+					c.close();
+				db.endTransaction();
+				Log.d(TAG, "transaction committed");
+			}
 		}
+		if ((arg1 <= 2) && (arg2 >= 3)) {
+			Log.d(TAG, "Triggering initial backup");
+			scheduleBackup();
+		}		
 		Log.d(TAG, "upgrade complete");
 	}
 	
@@ -202,7 +220,10 @@ public class DBAdapter extends SQLiteOpenHelper {
 		ContentValues cv = new ContentValues();
 		cv.put("uploadKey", key.toString());
 		cv.put("macAddress", mac.toString());
-		return dbh.insertOrThrow(CARDS, null, cv);
+		scheduleBackup();
+		long ret = dbh.insertOrThrow(CARDS, null, cv);
+		scheduleBackup();
+		return ret;
 	}
 	
 	public UploadKey getUploadKeyForMac(MacAddress mac) {
@@ -210,7 +231,6 @@ public class DBAdapter extends SQLiteOpenHelper {
 				new String[] { mac.toString() }, null, null, null);
 		try {
 			if(!c.moveToFirst()) {
-				c.close();
 				// TODO: throw something
 				return null;
 			}
@@ -247,5 +267,23 @@ public class DBAdapter extends SQLiteOpenHelper {
 		ContentValues cv = new ContentValues();
 		cv.put("name", name);
 		dbh.update(CARDS, cv, "_id = ?", new String[] { id + "" });
+		scheduleBackup();
+	}
+	
+	public void scheduleBackup() {
+		Log.d(TAG, "Scheduling backup");
+		try {
+			Class managerClass = Class.forName("android.app.backup.BackupManager");
+			Constructor managerConstructor = managerClass.getConstructor(Context.class);
+			Object manager = managerConstructor.newInstance(context);
+			Method m = managerClass.getMethod("dataChanged");
+			m.invoke(manager);
+			Log.d(TAG, "Backup requested");
+		} catch(ClassNotFoundException e) {
+			Log.d(TAG, "No backup manager found");
+		} catch(Throwable t) {
+			Log.d(TAG, "Scheduling backup failed " + t);
+			t.printStackTrace();
+		}
 	}
 }
