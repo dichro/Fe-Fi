@@ -17,6 +17,9 @@ import android.util.Log;
 import android.util.Xml;
 
 public class EyefiMessage {
+	public static final String TRANSFERMODETIMESTAMP = "transfermodetimestamp";
+	public static final String TRANSFERMODE = "transfermode";
+	public static final String CNONCE = "cnonce";
 	private static String TAG = "EyefiMessage";
 	private String name = "EyefiMessage";
 	private String content = "";
@@ -58,6 +61,9 @@ public class EyefiMessage {
 		setupParameter(FILESIZE);
 		setupParameter(FILESIGNATURE);
 		setupParameter(FLAGS);
+		setupParameter(CNONCE);
+		setupParameter(TRANSFERMODE);
+		setupParameter(TRANSFERMODETIMESTAMP);
 	}
 
 	public String getParameter(String parameter) {

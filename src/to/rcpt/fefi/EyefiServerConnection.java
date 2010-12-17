@@ -178,8 +178,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			throw new RuntimeException(); // TODO: something useful
 		HttpEntityEnclosingRequest eyefiRequest = (HttpEntityEnclosingRequest) request;
 		receiveRequestEntity(eyefiRequest);
-		StartSession ss = StartSession.parse(eyefiRequest.getEntity()
-				.getContent());
+		StartSession ss = new StartSession();
+		ss.parse(eyefiRequest.getEntity().getContent());
 		Log.d(TAG, "parsed startsession");
 		MacAddress mac = ss.getMacaddress();
 		UploadKey uploadKey = getKeyForMac(mac);
