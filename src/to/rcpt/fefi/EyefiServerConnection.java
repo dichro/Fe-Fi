@@ -45,10 +45,12 @@ import to.rcpt.fefi.util.Hexstring;
 import to.rcpt.fefi.util.MultipartInputStream;
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Context;
 import android.media.MediaScannerConnection;
 import android.media.MediaScannerConnection.MediaScannerConnectionClient;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.PowerManager;
 import android.provider.MediaStore.Images.Media;
 import android.util.Log;
 
@@ -132,7 +134,11 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	}
 
 	public void run() {
+		PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+		PowerManager.WakeLock wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "Fe-Fi");
 		try {
+			wakeLock.acquire();
+
 			while (isOpen()) {
 				Log.d(TAG, "waiting for request");
 				HttpRequest request = receiveRequestHeader();
@@ -162,6 +168,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
+		} finally {
+			wakeLock.release();
 		}
 		
 	}
