@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.zip.CheckedInputStream;
 
+import org.apache.http.ConnectionClosedException;
 import org.apache.http.Header;
 import org.apache.http.HeaderElement;
 import org.apache.http.HttpEntity;
@@ -166,6 +167,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 					close();
 				}
 			}
+		} catch (ConnectionClosedException e) {
+			Log.i(TAG, "client closed");
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
@@ -368,6 +371,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				Hexstring integrityDigest = checksum.getValue(uploadKey);
 				Log.d(TAG, "calculated digest " + integrityDigest);
 				// TODO: check integrity?
+			} else if(partName.equals("INTEGRITYDIGEST")) {
+				
 			}
 			in.close();
 			headers = getHeaders(in, boundary);
