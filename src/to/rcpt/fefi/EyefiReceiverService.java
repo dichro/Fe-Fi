@@ -3,22 +3,14 @@ package to.rcpt.fefi;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import to.rcpt.fefi.eyefi.Types.MacAddress;
 import to.rcpt.fefi.eyefi.Types.UploadKey;
 
 import android.app.Service;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.Binder;
 import android.os.IBinder;
-import android.os.PowerManager;
 import android.util.Log;
 
 public class EyefiReceiverService extends Service implements Runnable {
@@ -57,53 +49,10 @@ public class EyefiReceiverService extends Service implements Runnable {
 		stopSelf();
 	}
 
-	public class Unlock extends TimerTask {
-		PowerManager.WakeLock wakeLock;
-		
-		public Unlock(PowerManager.WakeLock wakeLock) {
-			this.wakeLock = wakeLock;
-		}
-
-		@Override
-		public void run() {
-			Log.i(TAG, "unlocking");
-			wakeLock.release();
-			wakeLock = null;
-		}		
-	}
-	
-	public class WifiWatcher extends BroadcastReceiver {
-		Timer t;
-		
-		public WifiWatcher() {
-			t = new Timer("wakelock unlocker", true);
-		}
-		
-		@Override
-		public void onReceive(Context context, Intent arg1) {
-			Log.i(TAG, "received network broadcast");
-			NetworkInfo networkInfo = (NetworkInfo) arg1.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
-			if(networkInfo.getType() != ConnectivityManager.TYPE_WIFI)
-				return;
-			Log.i(TAG, "locking");
-			PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-			PowerManager.WakeLock wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "Fe-Fi");
-			t.schedule(new Unlock(wakeLock), 120000);
-		}
-		
-		public void shutdown() {
-			t.cancel();
-		}
-	}
-	
-	private WifiWatcher receiver;
-	
 	public void onCreate() {
 		super.onCreate();
 		Log.d(TAG, "onCreate");
 		new Thread(this).start();
-		receiver = new WifiWatcher();
-		registerReceiver(receiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
 	}
 	
 	private EyefiCardScanActivity testKeyHelper = null;
@@ -139,9 +88,6 @@ public class EyefiReceiverService extends Service implements Runnable {
 	public void onDestroy() {
 		super.onDestroy();
 		Log.d(TAG, "onDestroy");
-		receiver.shutdown();
-		unregisterReceiver(receiver);
-		receiver = null;
 		db.close();
 		try {
 			eyefiSocket.close();
