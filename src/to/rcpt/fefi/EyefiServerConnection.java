@@ -2,7 +2,6 @@ package to.rcpt.fefi;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -18,6 +17,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.zip.CheckedInputStream;
 
+import org.apache.http.ConnectionClosedException;
 import org.apache.http.Header;
 import org.apache.http.HeaderElement;
 import org.apache.http.HttpEntity;
@@ -45,10 +45,12 @@ import to.rcpt.fefi.util.Hexstring;
 import to.rcpt.fefi.util.MultipartInputStream;
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Context;
 import android.media.MediaScannerConnection;
 import android.media.MediaScannerConnection.MediaScannerConnectionClient;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.PowerManager;
 import android.provider.MediaStore.Images.Media;
 import android.util.Log;
 
@@ -132,7 +134,11 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	}
 
 	public void run() {
+		PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+		PowerManager.WakeLock wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "Fe-Fi");
 		try {
+			wakeLock.acquire();
+
 			while (isOpen()) {
 				Log.d(TAG, "waiting for request");
 				HttpRequest request = receiveRequestHeader();
@@ -160,8 +166,12 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 					close();
 				}
 			}
+		} catch (ConnectionClosedException e) {
+			Log.i(TAG, "client closed");
 		} catch (Exception e) {
 			e.printStackTrace();
+		} finally {
+			wakeLock.release();
 		}
 		
 	}
@@ -360,6 +370,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				Hexstring integrityDigest = checksum.getValue(uploadKey);
 				Log.d(TAG, "calculated digest " + integrityDigest);
 				// TODO: check integrity?
+			} else if(partName.equals("INTEGRITYDIGEST")) {
+				
 			}
 			in.close();
 			headers = getHeaders(in, boundary);

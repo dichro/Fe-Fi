@@ -8,17 +8,14 @@ import to.rcpt.fefi.eyefi.Types.MacAddress;
 import to.rcpt.fefi.eyefi.Types.UploadKey;
 
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
-import android.os.PowerManager;
 import android.util.Log;
 
 public class EyefiReceiverService extends Service implements Runnable {
 	private ServerSocket eyefiSocket;
 	public static final String TAG = "EyefiReceiverService";
-	private PowerManager.WakeLock wakeLock;
 
 	public void run() {
 		Log.d(TAG, "Connecting to database");
@@ -55,9 +52,6 @@ public class EyefiReceiverService extends Service implements Runnable {
 	public void onCreate() {
 		super.onCreate();
 		Log.d(TAG, "onCreate");
-		PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-		wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "Fe-Fi");
-		wakeLock.acquire();
 		new Thread(this).start();
 	}
 	
@@ -94,7 +88,6 @@ public class EyefiReceiverService extends Service implements Runnable {
 	public void onDestroy() {
 		super.onDestroy();
 		Log.d(TAG, "onDestroy");
-		wakeLock.release();
 		db.close();
 		try {
 			eyefiSocket.close();
