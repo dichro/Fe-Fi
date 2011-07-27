@@ -34,6 +34,7 @@ import to.rcpt.fefi.eyefi.EyefiIntegrityDigest;
 import to.rcpt.fefi.eyefi.EyefiMessage;
 import to.rcpt.fefi.eyefi.GetPhotoStatus;
 import to.rcpt.fefi.eyefi.GetPhotoStatusResponse;
+import to.rcpt.fefi.eyefi.MarkLastPhotoInRollResponse;
 import to.rcpt.fefi.eyefi.StartSession;
 import to.rcpt.fefi.eyefi.StartSessionResponse;
 import to.rcpt.fefi.eyefi.UploadPhoto;
@@ -62,7 +63,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	private static final String CONTENT_DISPOSITION_PREAMBLE = "form-data; name=\"";
 	private static final String URN_GETPHOTOSTATUS = "\"urn:GetPhotoStatus\"";
 	private static final String URN_STARTSESSION = "\"urn:StartSession\"";
-	private static final String URN_LAST = "\"urn:MarkLastPhotoInRoll\""
+	private static final String URN_LAST = "\"urn:MarkLastPhotoInRoll\"";
 	private DBAdapter db;
 	
 	public static EyefiServerConnection makeConnection(EyefiReceiverService c, Socket s) throws IOException {
@@ -156,6 +157,15 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 							startSession(request);
 						else if (action.equals(URN_GETPHOTOSTATUS))
 							getPhotoStatus(request);
+						else if (action.equals(URN_LAST)) {
+							// should probably validate, but screw it. We're done here.
+							MarkLastPhotoInRollResponse response = new MarkLastPhotoInRollResponse();
+							sendResponseHeader(response);
+							sendResponseEntity(response);
+							Vibrator v = (Vibrator)context.getSystemService(Context.VIBRATOR_SERVICE);
+							v.vibrate(1000);
+							close();
+						}
 						else {
 							Log.e(TAG, "unknown SOAPAction: " + action);
 							close();
@@ -174,8 +184,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			e.printStackTrace();
 		} finally {
 			wakeLock.release();
-		}
-		
+			wakeLock.acquire(60000); // for luck... and reconnection?
+		}		
 	}
 
 	public UploadKey getKeyForMac(MacAddress mac) {
