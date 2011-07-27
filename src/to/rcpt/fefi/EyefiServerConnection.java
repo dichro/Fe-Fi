@@ -51,6 +51,7 @@ import android.media.MediaScannerConnection.MediaScannerConnectionClient;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.PowerManager;
+import android.os.Vibrator;
 import android.provider.MediaStore.Images.Media;
 import android.util.Log;
 
@@ -61,6 +62,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	private static final String CONTENT_DISPOSITION_PREAMBLE = "form-data; name=\"";
 	private static final String URN_GETPHOTOSTATUS = "\"urn:GetPhotoStatus\"";
 	private static final String URN_STARTSESSION = "\"urn:StartSession\"";
+	private static final String URN_LAST = "\"urn:MarkLastPhotoInRoll\""
 	private DBAdapter db;
 	
 	public static EyefiServerConnection makeConnection(EyefiReceiverService c, Socket s) throws IOException {
@@ -249,6 +251,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		Uri uri = cr.insert(Media.EXTERNAL_CONTENT_URI, values);
 		Log.d(TAG, "inserted values to uri " + uri);
 		new MediaScannerNotifier(file.getAbsolutePath(), id);
+		Vibrator v = (Vibrator)context.getSystemService(Context.VIBRATOR_SERVICE);
+		v.vibrate(300);
 	}
 	
 	private void copyToLocalFile(TarInputStream tarball, File destination) throws IOException {

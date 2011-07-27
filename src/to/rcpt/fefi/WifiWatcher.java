@@ -3,8 +3,6 @@ package to.rcpt.fefi;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.PowerManager;
@@ -36,6 +34,6 @@ public class WifiWatcher extends BroadcastReceiver {
 		wakeLock.acquire(120000);
 		context.startService(new Intent(context, EyefiReceiverService.class));
 		Vibrator v = (Vibrator)context.getSystemService(Context.VIBRATOR_SERVICE);
-		v.vibrate(300);
+		v.vibrate(600);
 	}
 }
