@@ -58,6 +58,7 @@ import android.util.Log;
 
 public class EyefiServerConnection extends DefaultHttpServerConnection implements Runnable {
 	public static final String TAG = "EyefiServerConnection";
+	// TODO(dichro): no, really. generate a nonce.
 	private ServerNonce serverNonce = new ServerNonce("deadbeefdeadbeefdeadbeefdeadbeef");
 	private EyefiReceiverService context;
 	private static final String CONTENT_DISPOSITION_PREAMBLE = "form-data; name=\"";
@@ -383,9 +384,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				UploadKey uploadKey = getKeyForMac(uploadPhoto.getMacAddress());
 				Hexstring integrityDigest = checksum.getValue(uploadKey);
 				Log.d(TAG, "calculated digest " + integrityDigest);
-				// TODO: check integrity?
 			} else if(partName.equals("INTEGRITYDIGEST")) {
-				
+				// TODO: check integrity?				
 			}
 			in.close();
 			headers = getHeaders(in, boundary);
