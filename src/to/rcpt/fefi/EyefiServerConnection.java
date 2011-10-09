@@ -47,19 +47,22 @@ import to.rcpt.fefi.util.MultipartInputStream;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.media.MediaScannerConnection;
 import android.media.MediaScannerConnection.MediaScannerConnectionClient;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.PowerManager;
 import android.os.Vibrator;
+import android.provider.MediaStore.Images;
+import android.provider.MediaStore.Images.ImageColumns;
 import android.provider.MediaStore.Images.Media;
 import android.util.Log;
 
 public class EyefiServerConnection extends DefaultHttpServerConnection implements Runnable {
 	public static final String TAG = "EyefiServerConnection";
 	private ServerNonce serverNonce = new ServerNonce("deadbeefdeadbeefdeadbeefdeadbeef");
-	private EyefiReceiverService context;
+	EyefiReceiverService context;
 	private static final String CONTENT_DISPOSITION_PREAMBLE = "form-data; name=\"";
 	private static final String URN_GETPHOTOSTATUS = "\"urn:GetPhotoStatus\"";
 	private static final String URN_STARTSESSION = "\"urn:StartSession\"";
@@ -218,6 +221,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	}
 
 	private class MediaScannerNotifier implements MediaScannerConnectionClient {
+		String projection[] = { Images.ImageColumns.DATE_TAKEN };
+		
 		public MediaScannerNotifier(String path, long id) {
 			_id = id;
 			_path = path;
@@ -234,6 +239,15 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			Log.d(TAG, "done scanFile " + _path);
 			db.finishImage(_id, uri);
 			_connection.disconnect();
+			Cursor cur = context.getContentResolver().query(uri, projection, null, null, null);
+			if(cur.moveToFirst()) {
+				long dateTaken = cur.getLong(cur.getColumnIndex(Images.ImageColumns.DATE_TAKEN));
+				Date d = new Date(dateTaken);
+				Log.d(TAG, "image taken on " + d);
+			} else {
+				Log.d(TAG, "Weird, returned URI " + uri + " appears to have no data");
+			}
+			cur.close();
 		}
 
 		private MediaScannerConnection _connection;
