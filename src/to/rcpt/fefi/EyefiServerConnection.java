@@ -11,8 +11,11 @@ import java.net.Socket;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.zip.CheckedInputStream;
@@ -48,6 +51,7 @@ import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.media.ExifInterface;
 import android.media.MediaScannerConnection;
 import android.media.MediaScannerConnection.MediaScannerConnectionClient;
 import android.net.Uri;
@@ -55,7 +59,6 @@ import android.os.Environment;
 import android.os.PowerManager;
 import android.os.Vibrator;
 import android.provider.MediaStore.Images;
-import android.provider.MediaStore.Images.ImageColumns;
 import android.provider.MediaStore.Images.Media;
 import android.util.Log;
 
@@ -239,11 +242,36 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			Log.d(TAG, "done scanFile " + _path);
 			db.finishImage(_id, uri);
 			_connection.disconnect();
-			Cursor cur = context.getContentResolver().query(uri, projection, null, null, null);
+			ContentResolver cr = context.getContentResolver();
+			Cursor cur = cr.query(uri, projection, null, null, null);
 			if(cur.moveToFirst()) {
 				long dateTaken = cur.getLong(cur.getColumnIndex(Images.ImageColumns.DATE_TAKEN)) / 1000;
 				Date d = new Date(dateTaken);
-				Log.d(TAG, "image taken on " + d + " (" + dateTaken + "); now " + new Date().getTime());
+				Log.d(TAG, "image2 taken on " + d + " (" + dateTaken + "); now " + new Date().getTime());
+//				 TODO(dichro): load image offset from card list
+				long dateOffset = 1318188789 - 1318184808;
+				dateTaken += dateOffset * 1000;
+				Log.d(TAG, "altering timestamp to " + dateTaken);
+				String dateTime = null;
+				try {
+					ExifInterface exif = new ExifInterface(_path);
+					dateTime = exif.getAttribute(ExifInterface.TAG_DATETIME);
+					Log.d(TAG, "exif says " + dateTime);
+				} catch (IOException e) {
+					Log.d(TAG, "exif error " + e);
+					e.printStackTrace();
+				}
+				if(dateTime != null) {
+				try {
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
+					Date date = sdf.parse(dateTime);
+					Log.d(TAG, "exif timestamp is " + d + " " + d.getTime());
+					long revisedDate = d.getTime() + dateOffset * 1000;
+					Log.d(TAG, "revisedDate " + revisedDate + " " + new Date(revisedDate));
+				} catch (ParseException e) {
+					Log.d(TAG, "failed to parse " + dateTime);
+				}
+				}
 			} else {
 				Log.d(TAG, "Weird, returned URI " + uri + " appears to have no data");
 			}
