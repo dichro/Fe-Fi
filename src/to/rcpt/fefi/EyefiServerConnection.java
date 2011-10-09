@@ -241,9 +241,9 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			_connection.disconnect();
 			Cursor cur = context.getContentResolver().query(uri, projection, null, null, null);
 			if(cur.moveToFirst()) {
-				long dateTaken = cur.getLong(cur.getColumnIndex(Images.ImageColumns.DATE_TAKEN));
+				long dateTaken = cur.getLong(cur.getColumnIndex(Images.ImageColumns.DATE_TAKEN)) / 1000;
 				Date d = new Date(dateTaken);
-				Log.d(TAG, "image taken on " + d);
+				Log.d(TAG, "image taken on " + d + " (" + dateTaken + "); now " + new Date().getTime());
 			} else {
 				Log.d(TAG, "Weird, returned URI " + uri + " appears to have no data");
 			}
