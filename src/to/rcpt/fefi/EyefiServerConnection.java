@@ -245,13 +245,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			ContentResolver cr = context.getContentResolver();
 			Cursor cur = cr.query(uri, projection, null, null, null);
 			if(cur.moveToFirst()) {
-				long dateTaken = cur.getLong(cur.getColumnIndex(Images.ImageColumns.DATE_TAKEN)) / 1000;
-				Date d = new Date(dateTaken);
-				Log.d(TAG, "image2 taken on " + d + " (" + dateTaken + "); now " + new Date().getTime());
-//				 TODO(dichro): load image offset from card list
-				long dateOffset = 1318188789 - 1318184808;
-				dateTaken += dateOffset * 1000;
-				Log.d(TAG, "altering timestamp to " + dateTaken);
+				// TODO(dichro): load image offset from card list
+				long dateOffset = 3290;
 				String dateTime = null;
 				try {
 					ExifInterface exif = new ExifInterface(_path);
@@ -261,16 +256,23 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 					Log.d(TAG, "exif error " + e);
 					e.printStackTrace();
 				}
+				long revisedDate = -1;
 				if(dateTime != null) {
-				try {
-					SimpleDateFormat sdf = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
-					Date date = sdf.parse(dateTime);
-					Log.d(TAG, "exif timestamp is " + d + " " + d.getTime());
-					long revisedDate = d.getTime() + dateOffset * 1000;
-					Log.d(TAG, "revisedDate " + revisedDate + " " + new Date(revisedDate));
-				} catch (ParseException e) {
-					Log.d(TAG, "failed to parse " + dateTime);
+					try {
+						SimpleDateFormat sdf = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
+						Date date = sdf.parse(dateTime);
+						Log.d(TAG, "exif timestamp is " + date + " " + date.getTime());
+						revisedDate = date.getTime() + dateOffset * 1000;
+						Log.d(TAG, "revisedDate " + revisedDate + " " + new Date(revisedDate));
+					} catch (ParseException e) {
+						Log.d(TAG, "failed to parse " + dateTime);
+					}
 				}
+				if(revisedDate != -1) {
+					ContentValues cv = new ContentValues();
+					cv.put(Images.ImageColumns.DATE_TAKEN, revisedDate);
+					int updated = cr.update(uri, cv, null, null);
+					Log.d(TAG, "updated " + updated + " rows to timestamp " + revisedDate);
 				}
 			} else {
 				Log.d(TAG, "Weird, returned URI " + uri + " appears to have no data");
