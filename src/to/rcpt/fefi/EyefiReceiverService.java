@@ -3,20 +3,96 @@ package to.rcpt.fefi;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import to.rcpt.fefi.eyefi.Types.MacAddress;
 import to.rcpt.fefi.eyefi.Types.UploadKey;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.PowerManager;
 import android.util.Log;
 
 public class EyefiReceiverService extends Service implements Runnable {
 	private ServerSocket eyefiSocket;
 	public static final String TAG = "EyefiReceiverService";
 
+	private class GetAFix implements LocationListener, Runnable {
+		PowerManager.WakeLock wakeLock;
+		LocationManager locationManager;
+		Criteria criteria;
+		String provider;
+		DBAdapter db;
+		
+		GetAFix() {
+			PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+			wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "Fe-Fi");
+			locationManager = (LocationManager)getSystemService(LOCATION_SERVICE);
+			criteria = new Criteria();
+			criteria.setAccuracy(Criteria.ACCURACY_FINE);
+			criteria.setPowerRequirement(Criteria.POWER_HIGH);
+			List<String> providers = locationManager.getProviders(criteria, true);
+			if(providers.size() > 0) {
+				provider = providers.get(0);
+			} else {
+				Log.e(TAG, "Couldn't find a GPS provider, guessing");
+				provider = "GPS";
+			}
+			db = getDatabase();
+		}
+		
+		private boolean updating = false;
+		
+		public synchronized void poke() {
+			Log.d(TAG, "Requesting location updates");
+			if(updating)
+				return;
+			wakeLock.acquire(180000);
+			updating = true;
+			new Thread(this).start();
+		}
+
+		public synchronized void onLocationChanged(Location location) {
+			Log.d(TAG, "Got location " + location);
+			// TODO: insert in db
+			if(!updating)
+				return;
+			updating = false;
+			locationManager.removeUpdates(this);
+			wakeLock.release();
+			Looper.myLooper().quit(); // this is retarded
+		}
+
+		public void onProviderDisabled(String provider) {
+			// TODO Auto-generated method stub
+		}
+
+		public void onProviderEnabled(String provider) {
+			// TODO Auto-generated method stub
+		}
+
+		public void onStatusChanged(String provider, int status, Bundle extras) {
+			// TODO Auto-generated method stub
+		}
+
+		public void run() {
+			Looper.prepare();
+			locationManager.requestLocationUpdates(provider, 5000, 10, this);
+			Looper.loop();
+		}
+	}
+	
 	public void run() {
 		Log.d(TAG, "Connecting to database");
 		db = DBAdapter.make(this);
@@ -34,6 +110,7 @@ public class EyefiReceiverService extends Service implements Runnable {
 			} catch (InterruptedException e) {
 			}
 		}
+		GetAFix fix = new GetAFix();
 		Log.d(TAG, "Listening on incoming port");
 		while (!eyefiSocket.isClosed()) { // .isBound() remains true after closing?
 			try {
@@ -41,6 +118,7 @@ public class EyefiReceiverService extends Service implements Runnable {
 				Log.i(TAG, "connection from " + eyefiClient.getRemoteSocketAddress());
 				EyefiServerConnection esc = EyefiServerConnection.makeConnection(this, eyefiClient);
 				new Thread(esc).start();
+				fix.poke();
 			} catch (IOException e) {
 				// TODO: handle exception
 				e.printStackTrace();

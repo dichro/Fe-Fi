@@ -294,8 +294,8 @@ public class DBAdapter extends SQLiteOpenHelper {
 	public void scheduleBackup() {
 		Log.d(TAG, "Scheduling backup");
 		try {
-			Class managerClass = Class.forName("android.app.backup.BackupManager");
-			Constructor managerConstructor = managerClass.getConstructor(Context.class);
+			Class<?> managerClass = Class.forName("android.app.backup.BackupManager");
+			Constructor<?> managerConstructor = managerClass.getConstructor(Context.class);
 			Object manager = managerConstructor.newInstance(context);
 			Method m = managerClass.getMethod("dataChanged");
 			m.invoke(manager);
