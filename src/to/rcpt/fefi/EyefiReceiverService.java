@@ -65,7 +65,7 @@ public class EyefiReceiverService extends Service implements Runnable {
 
 		public synchronized void onLocationChanged(Location location) {
 			Log.d(TAG, "Got location " + location);
-			// TODO: insert in db
+			db.addLocation(location);
 			if(!updating)
 				return;
 			updating = false;

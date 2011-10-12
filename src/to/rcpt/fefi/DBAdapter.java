@@ -13,6 +13,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.location.Location;
 import android.net.Uri;
 import android.util.Log;
 
@@ -213,6 +214,27 @@ public class DBAdapter extends SQLiteOpenHelper {
 		if(observer != null)
 			observer.notifyImage();
 		return ret;	
+	}
+	
+	public void addLocation(Location l) {
+		ContentValues cv = new ContentValues();
+		cv.put("latitude", l.getLatitude());
+		cv.put("longitude", l.getLongitude());
+		if(l.hasAltitude())
+			cv.put("altitude", l.getAltitude());
+		if(l.hasAccuracy())
+			cv.put("accuracy", l.getAccuracy());
+		cv.put("fixtime", l.getTime());
+		dbh.insertOrThrow(LOCATION, null, cv);
+	}
+	
+	public long countLocations() {
+		Cursor c = dbh.rawQuery("SELECT COUNT(*) FROM " + LOCATION, null);
+		if(!c.moveToFirst())
+			return 0;
+		long ret = c.getLong(0);
+		c.close();
+		return ret;
 	}
 	
 	public void receiveImage(long id, String name, String path) {
