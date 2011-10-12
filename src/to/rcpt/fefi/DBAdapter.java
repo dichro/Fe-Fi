@@ -20,6 +20,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 	private static final String UPLOADS = "uploads";
 	private static final String CARDS = "cameras";
 	private static final String TAG = "DBAdapter";
+	private static final String LOCATION = "location";
 	protected SQLiteDatabase dbh;
 	private Context context;
 	
@@ -47,9 +48,23 @@ public class DBAdapter extends SQLiteOpenHelper {
 	}
 	
 	protected DBAdapter(Context c) {
-		super(c, "FeFi", null, 3);
+		super(c, "FeFi", null, sqlSetup.length);
 		context = c;
 	}
+	
+	final static String sqlSetup[] = {
+		null,
+		null,
+		null,
+		"CREATE TABLE " + LOCATION + " ("
+		+ "_id INTEGER PRIMARY KEY AUTOINCREMENT,"
+		+ "latitude REAL NOT NULL,"
+		+ "longitude REAL NOT NULL,"
+		+ "altitude REAL,"
+		+ "accuracy REAL,"
+		+ "fixtime INT NOT NULL"
+		+ ");",
+	};
 	
 	@Override
 	public void onCreate(SQLiteDatabase db) {
@@ -76,9 +91,9 @@ public class DBAdapter extends SQLiteOpenHelper {
 	}
 
 	@Override
-	public void onUpgrade(SQLiteDatabase db, int arg1, int arg2) {
-		Log.e(TAG, "db upgrade requested from " + arg1 + " to " + arg2);
-		if ((arg1 <= 1) && (arg2 >= 2)) {
+	public void onUpgrade(SQLiteDatabase db, int currentVersion, int requestedVersion) {
+		Log.e(TAG, "db upgrade requested from " + currentVersion + " to " + requestedVersion);
+		if ((currentVersion <= 1) && (requestedVersion >= 2)) {
 			Log.d(TAG, "migrating log data to sdcard");
 			db.beginTransaction();
 			Cursor c = db.query(UPLOADS, new String[] { "path", "log" },
@@ -86,34 +101,33 @@ public class DBAdapter extends SQLiteOpenHelper {
 			int pathindex = c.getColumnIndex("path");
 			int logindex = c.getColumnIndex("log");
 			try {
-				if (!c.moveToFirst())
-					return;
-				do {
-					String path = c.getString(pathindex);
-					String log = c.getString(logindex);
-					Log.d(TAG, "Image " + path + " has " + log.length()
-							+ " byte log");
-					if (!path.endsWith("JPG"))
-						throw new RuntimeException(
-								"don't know what to do with path " + path);
-					String logpath = path.replace("JPG", "log");
-					File f = new File(logpath);
-					if (f.exists()) {
-						if (f.length() > log.length())
-							throw new RuntimeException("Image " + path
-									+ " has a log file " + f.length()
-									+ " which is longer than desired log "
-									+ log.length());
-						if (f.length() == log.length()) {
-							Log.d(TAG, "Log already exists, continuing");
-							continue;
+				if (c.moveToFirst())
+					do {
+						String path = c.getString(pathindex);
+						String log = c.getString(logindex);
+						Log.d(TAG, "Image " + path + " has " + log.length()
+								+ " byte log");
+						if (!path.endsWith("JPG"))
+							throw new RuntimeException(
+									"don't know what to do with path " + path);
+						String logpath = path.replace("JPG", "log");
+						File f = new File(logpath);
+						if (f.exists()) {
+							if (f.length() > log.length())
+								throw new RuntimeException("Image " + path
+										+ " has a log file " + f.length()
+										+ " which is longer than desired log "
+										+ log.length());
+							if (f.length() == log.length()) {
+								Log.d(TAG, "Log already exists, continuing");
+								continue;
+							}
 						}
-					}
-					Log.d(TAG, "writing log to " + logpath);
-					FileWriter out = new FileWriter(logpath, false);
-					out.write(log);
-					out.close();
-				} while (c.moveToNext());
+						Log.d(TAG, "writing log to " + logpath);
+						FileWriter out = new FileWriter(logpath, false);
+						out.write(log);
+						out.close();
+					} while (c.moveToNext());
 				c.close();
 				Log
 						.d(TAG,
@@ -124,6 +138,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 				Log.d(TAG, "updated " + updated + " rows");
 				db.setTransactionSuccessful();
 			} catch (IOException e) {
+				Log.d(TAG, "exception " + e);
 				throw new RuntimeException(e);
 			} finally {
 				if (!c.isClosed())
@@ -132,10 +147,16 @@ public class DBAdapter extends SQLiteOpenHelper {
 				Log.d(TAG, "transaction committed");
 			}
 		}
-		if ((arg1 <= 2) && (arg2 >= 3)) {
+		if ((currentVersion <= 2) && (requestedVersion >= 3)) {
 			Log.d(TAG, "Triggering initial backup");
 			scheduleBackup();
-		}		
+		}
+		for(int i = currentVersion; i < requestedVersion; i++) {
+			if(sqlSetup[i] == null)
+				continue;
+			Log.d(TAG, "running " + sqlSetup[i]);
+			db.execSQL(sqlSetup[i]);
+		}
 		Log.d(TAG, "upgrade complete");
 	}
 	
