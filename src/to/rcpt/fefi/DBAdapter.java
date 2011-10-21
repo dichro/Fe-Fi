@@ -237,6 +237,12 @@ public class DBAdapter extends SQLiteOpenHelper {
 		return ret;
 	}
 	
+	public Cursor getLocations() {
+		Cursor c = dbh.query(LOCATION, new String[] { "_id", "latitude", "longitude", "altitude", "accuracy", "fixtime" }, 
+				null, null, null, null, null);
+		return c;
+	}
+	
 	public void receiveImage(long id, String name, String path) {
 		ContentValues cv = new ContentValues();
 		cv.put("name", name);
