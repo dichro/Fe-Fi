@@ -3,6 +3,7 @@ package to.rcpt.fefi;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ListActivity;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -35,12 +36,7 @@ public class EyefiCardListActivity extends ListActivity implements OnClickListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.card_control);
         Button b = (Button)findViewById(R.id.scan_button);
-        b.setOnClickListener(new OnClickListener() {		
-			public void onClick(View v) {
-				Intent i = new Intent().setClass(EyefiCardListActivity.this, EyefiCardScanActivity.class);
-				startActivityForResult(i, 0);
-			}
-		});
+        b.setOnClickListener(new ClickForIntent(EyefiCardListActivity.this, EyefiCardScanActivity.class));
         db = DBAdapter.make(this);
         c = db.getCards();
         startManagingCursor(c);
@@ -58,6 +54,7 @@ public class EyefiCardListActivity extends ListActivity implements OnClickListen
 		}
 		TextView v = (TextView)findViewById(R.id.numLocations);
 		v.setText(db.countLocations() + "");
+		v.setOnClickListener(new ClickForIntent(this, LocationListActivity.class));
     }
     
 	@Override
@@ -67,6 +64,21 @@ public class EyefiCardListActivity extends ListActivity implements OnClickListen
 		inflater.inflate(R.layout.card_control_item_menu, menu);
 	}
 		
+	public class ClickForIntent implements OnClickListener {
+		private Context context;
+		private Class<?> targetClass;
+
+		public ClickForIntent(Context context, Class<?> targetClass) {
+			this.context = context;
+			this.targetClass = targetClass;
+		}
+
+		public void onClick(View v) {
+			Intent i = new Intent().setClass(context, targetClass);
+			startActivityForResult(i, 0);
+		}
+	}
+
 	public class CardDeleter implements DialogInterface.OnClickListener {
 		private int cardId;
 		

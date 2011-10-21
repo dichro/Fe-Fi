@@ -21,6 +21,8 @@
 <activity android:name="IncomingImagesActivity"></activity>
 <activity android:name="EyefiCardScanActivity"></activity>
 <activity android:name="SettingsActivity"></activity>
+<activity android:name="LocationListActivity"></activity>
+
 <service android:name="EyefiReceiverService"></service>
 <receiver android:name="WifiWatcher">
     <intent-filter>
@@ -30,6 +32,7 @@
 
 <meta-data android:name="com.google.android.backup.api_key"
     android:value="AEdPqrEAAAAItorfOQkil_PYlubegObaQlSWOXf5et9y3IBSqQ" />
+<activity android:name="LocationListActivity"></activity>
 
 </application>
 
