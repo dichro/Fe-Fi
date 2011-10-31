@@ -292,7 +292,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 	
 	public Cursor getUploads() {
 		Cursor c = dbh.query(UPLOADS, new String[] { "_id", "name", "updated", "status", "imageUri" }, 
-				null, null, null, null, "updated DESC");
+				"status > 0", null, null, null, "updated DESC");
 		return c;
 	}
 	

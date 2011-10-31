@@ -3,10 +3,12 @@ package to.rcpt.fefi;
 import java.util.Date;
 
 import android.app.ListActivity;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore.Images;
 import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.View;
@@ -14,7 +16,57 @@ import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 
+/*
+ * TODO(dichro):
+ *   only show completed images
+ *   view per-image log data
+ *   show timestamp offset to closest stored location
+ *   indicate whether gps location is stored in content provider
+ *   allow push of closest gps location into content provider
+ *     allow push of all closest gps locations (matching some restriction criteria?) into location provider
+ *   
+ */
 public class IncomingImagesActivity extends ListActivity {
+	private class IncomingImageViewBinder implements
+			SimpleCursorAdapter.ViewBinder {
+		private ContentResolver cr;
+		String projection[] = { Images.ImageColumns.DATE_TAKEN };
+
+		IncomingImageViewBinder() {
+			cr = getContentResolver();		
+		}
+		
+		public boolean setViewValue(View view, Cursor cursor, int columnIndex) {
+			int index = cursor.getColumnIndex(IMAGES_UPDATED);
+			if(columnIndex == index) {
+				TextView tv = (TextView) view;
+				long timestamp = cursor.getLong(index);
+				Date d = new Date(timestamp);
+				tv.setText(DateFormat.format("yyyy-MM-dd kk:mm:ss", d));
+				return true;
+			}
+			if(columnIndex == cursor.getColumnIndex("imageUri")) {
+				TextView tv = (TextView) view;
+				String uriString = cursor.getString(columnIndex);
+				if(uriString == null) {
+					tv.setText("null URI?");
+					return true;
+				}
+				Uri uri = Uri.parse(uriString);
+				// error for the above?
+				Cursor c = cr.query(uri, projection, null, null, null);
+				if(c.moveToFirst()) {
+					tv.setText(DateFormat.format("yyyy-MM-dd kk:mm:ss", c.getLong(c.getColumnIndex(Images.ImageColumns.DATE_TAKEN))));
+				} else {
+					tv.setText("No date found.");
+				}
+				c.close();
+				return true;
+			}
+			return false;
+		}
+	}
+
 	private static final String IMAGES_UPDATED = "updated";
 	private DBAdapter db;
 	private static final String TAG = "IncomingImagesActivity";
@@ -28,20 +80,9 @@ public class IncomingImagesActivity extends ListActivity {
         c = db.getUploads();
         startManagingCursor(c);
         adapter = new SimpleCursorAdapter(this, R.layout.incoming_list_item, c,
-        		new String[] { "name", IMAGES_UPDATED }, new int[] { R.id.name, R.id.received });
-        adapter.setViewBinder(new SimpleCursorAdapter.ViewBinder() {		
-			public boolean setViewValue(View view, Cursor cursor, int columnIndex) {
-				TextView tv = (TextView) view;
-				int index = cursor.getColumnIndex(IMAGES_UPDATED);
-				if(columnIndex == index) {
-					long timestamp = cursor.getLong(index);
-					Date d = new Date(timestamp);
-					tv.setText(DateFormat.format("yyyy-MM-dd kk:mm:ss", d));
-					return true;
-				}
-				return false;
-			}
-		});
+        		new String[] { "name", IMAGES_UPDATED, "imageUri" },
+        		new int[] { R.id.name, R.id.received, R.id.timestamp });
+        adapter.setViewBinder(new IncomingImageViewBinder());
 		setListAdapter(adapter);
     }
     

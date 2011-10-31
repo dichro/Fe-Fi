@@ -2,6 +2,11 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
      android:layout_width="fill_parent"
      android:layout_height="wrap_content"
+     android:orientation="vertical">
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+     android:layout_width="fill_parent"
+     android:layout_height="wrap_content"
      android:orientation="horizontal">
 
      <TextView android:id="@+id/name"
@@ -15,4 +20,17 @@
          android:layout_width="wrap_content"
          android:layout_height="wrap_content"/>
 
+</LinearLayout>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+     android:layout_width="fill_parent"
+     android:layout_height="wrap_content"
+     android:orientation="horizontal">
+
+     <TextView android:id="@+id/timestamp"
+         android:textSize="16sp"
+         android:paddingRight="16sp"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"/>
+
+</LinearLayout>
 </LinearLayout>
