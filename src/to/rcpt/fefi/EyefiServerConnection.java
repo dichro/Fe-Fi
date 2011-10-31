@@ -239,6 +239,11 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		}
 
 		public void onScanCompleted(String path, final Uri uri) {
+			if(uri == null) {
+				Log.e(TAG, "scanFile " + _path + " failed");
+				_connection.disconnect();
+				return;
+			}
 			Log.d(TAG, "done scanFile " + _path);
 			db.finishImage(_id, uri);
 			_connection.disconnect();
