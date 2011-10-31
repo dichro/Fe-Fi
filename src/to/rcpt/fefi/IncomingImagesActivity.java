@@ -12,6 +12,7 @@ import android.provider.MediaStore.Images;
 import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
@@ -30,7 +31,11 @@ public class IncomingImagesActivity extends ListActivity {
 	private class IncomingImageViewBinder implements
 			SimpleCursorAdapter.ViewBinder {
 		private ContentResolver cr;
-		String projection[] = { Images.ImageColumns.DATE_TAKEN };
+		String projection[] = { 
+				Images.ImageColumns.DATE_TAKEN,
+				Images.ImageColumns.LONGITUDE,
+				Images.ImageColumns.LATITUDE,
+		};
 
 		IncomingImageViewBinder() {
 			cr = getContentResolver();		
@@ -46,7 +51,10 @@ public class IncomingImagesActivity extends ListActivity {
 				return true;
 			}
 			if(columnIndex == cursor.getColumnIndex("imageUri")) {
-				TextView tv = (TextView) view;
+				ViewGroup g = (ViewGroup)view;
+				TextView tv = (TextView)g.findViewById(R.id.timestamp);
+				TextView latitude = (TextView)g.findViewById(R.id.latitude);
+				TextView longitude = (TextView)g.findViewById(R.id.longitude);
 				String uriString = cursor.getString(columnIndex);
 				if(uriString == null) {
 					tv.setText("null URI?");
@@ -57,12 +65,15 @@ public class IncomingImagesActivity extends ListActivity {
 				Cursor c = cr.query(uri, projection, null, null, null);
 				if(c.moveToFirst()) {
 					tv.setText(DateFormat.format("yyyy-MM-dd kk:mm:ss", c.getLong(c.getColumnIndex(Images.ImageColumns.DATE_TAKEN))));
+					latitude.setText(c.getString(c.getColumnIndex(Images.ImageColumns.LATITUDE)));
+					longitude.setText(c.getString(c.getColumnIndex(Images.ImageColumns.LONGITUDE)));
 				} else {
 					tv.setText("No date found.");
 				}
 				c.close();
 				return true;
 			}
+			// get viewgroup by id. iterate through children, switch on id to populate.
 			return false;
 		}
 	}
@@ -81,7 +92,7 @@ public class IncomingImagesActivity extends ListActivity {
         startManagingCursor(c);
         adapter = new SimpleCursorAdapter(this, R.layout.incoming_list_item, c,
         		new String[] { "name", IMAGES_UPDATED, "imageUri" },
-        		new int[] { R.id.name, R.id.received, R.id.timestamp });
+        		new int[] { R.id.name, R.id.received, R.id.cpdata });
         adapter.setViewBinder(new IncomingImageViewBinder());
 		setListAdapter(adapter);
     }
