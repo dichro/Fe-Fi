@@ -318,6 +318,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		File destinationPath = null;
 		long id = -1;
 		boolean success = false;
+		String readDigest = null, calculatedDigest = null;
 		while(!headers.isEmpty()) {
 			String contentDisposition = headers.get("Content-Disposition");
 			if(contentDisposition == null)
@@ -381,16 +382,29 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 					file = tarball.getNextEntry();
 				}
 				UploadKey uploadKey = getKeyForMac(uploadPhoto.getMacAddress());
-				Hexstring integrityDigest = checksum.getValue(uploadKey);
-				Log.d(TAG, "calculated digest " + integrityDigest);
+				calculatedDigest = checksum.getValue(uploadKey).toString();
+				Log.d(TAG, "calculated digest " + calculatedDigest);
 				// TODO: check integrity?
 			} else if(partName.equals("INTEGRITYDIGEST")) {
-				
+				BufferedReader r = new BufferedReader(new InputStreamReader(in));
+				readDigest = r.readLine();
+				Log.d(TAG, "read digest " + readDigest);
 			}
 			in.close();
 			headers = getHeaders(in, boundary);
 		}
-		Log.d(TAG, " done with multipart input");
+		if(calculatedDigest == null) {
+			Log.d(TAG, "failed to calculate a digest, rejecting");
+			return;
+		}
+		if(readDigest == null) {
+			Log.d(TAG, "failed to receive a digest, rejecting");
+			return;
+		}
+		if(!readDigest.equals(calculatedDigest)) {
+			Log.d(TAG, "received digest does not match calculated digest, rejecting");
+			return;
+		}
 		if(destinationPath != null)
 			db.receiveImage(id, imageName, destinationPath.toString());
 		UploadPhotoResponse response = new UploadPhotoResponse(success);
