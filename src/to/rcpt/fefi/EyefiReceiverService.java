@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import to.rcpt.fefi.eyefi.Types.MacAddress;
 import to.rcpt.fefi.eyefi.Types.UploadKey;
@@ -29,11 +27,11 @@ public class EyefiReceiverService extends Service implements Runnable {
 	public static final String TAG = "EyefiReceiverService";
 
 	private class GetAFix implements LocationListener, Runnable {
-		PowerManager.WakeLock wakeLock;
-		LocationManager locationManager;
-		Criteria criteria;
-		String provider;
-		DBAdapter db;
+		private PowerManager.WakeLock wakeLock;
+		private LocationManager locationManager;
+		private Criteria criteria;
+		private String provider;
+		private DBAdapter db;
 		
 		GetAFix() {
 			PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
@@ -70,7 +68,8 @@ public class EyefiReceiverService extends Service implements Runnable {
 				return;
 			updating = false;
 			locationManager.removeUpdates(this);
-			wakeLock.release();
+			if(wakeLock.isHeld())
+				wakeLock.release();
 			Looper.myLooper().quit(); // this is retarded
 		}
 
