@@ -160,7 +160,7 @@ public class MultipartInputStream extends FilterInputStream {
 	public Map<String, String> getHeaders() throws IOException {
 		Map<String, String> headers = new HashMap<String, String>();
 		setBoundary("\r\n\r\n");
-		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+		BufferedReader reader = new BufferedReader(new InputStreamReader(this));
 		String line = reader.readLine();
 		while(line != null) {
 			int pos = line.indexOf(": ");
