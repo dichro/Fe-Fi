@@ -221,7 +221,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		sendResponseEntity(ssr);
 	}
 
-	private void importPhoto(File file, String fileName, long id) {
+	private Uri importPhoto(File file, String fileName, long id) {
 		Log.d(TAG, "importing " + fileName + " from " + file);
 		ContentValues values = new ContentValues();
 		Date now = new Date();
@@ -274,6 +274,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		Log.d(TAG, "inserted values to uri " + uri);
 		Vibrator v = (Vibrator)context.getSystemService(Context.VIBRATOR_SERVICE);
 		v.vibrate(300);
+		return uri;
 	}
 
 	private void importDate(ExifInterface exif, ContentValues values,
@@ -351,6 +352,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		boolean success = false;
 		String readDigest = null, calculatedDigest = null;
 		Vector<File> written = new Vector<File>();
+		Uri uri = null;
 		while(!headers.isEmpty()) {
 			String contentDisposition = headers.get("Content-Disposition");
 			if(contentDisposition == null)
@@ -400,7 +402,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 							destinationPath = openWritableFile(id, "JPG");
 							Log.d(TAG, "want to write " + imageName + " to " + destinationPath);
 							copyToLocalFile(tarball, destinationPath);
-							importPhoto(destinationPath, fileName, id);
+							uri = importPhoto(destinationPath, fileName, id);
 							written.add(destinationPath);
 							success = true;
 						} catch(IOException e) {
@@ -438,8 +440,10 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			Log.d(TAG, "received digest does not match calculated digest, rejecting");
 			success = false;
 		}
-		if(success && destinationPath != null)
+		if(success && destinationPath != null) {
 			db.receiveImage(id, imageName, destinationPath.toString());
+			db.finishImage(id, uri);
+		}
 		if(!success)
 			for(File f : written)
 				f.delete();
