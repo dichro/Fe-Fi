@@ -5,7 +5,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
@@ -15,7 +14,6 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
@@ -132,7 +130,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		long id = db.imageExists(filesignature);
 		if(id != -1) {
 			Log.i(TAG, myId + " image " + filesignature + " exists");
-			offset = 0;
+//			offset = 0;
 		} else {
 			Log.i(TAG, myId + " new image " + filesignature);
 			db.registerNewImage(filesignature);
@@ -339,7 +337,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			Log.e(TAG, myId + " no boundary in content-type");
 			close();
 		}
-		String boundary = "--" + value.substring(pos + b.length()) + "\r\n";
+		String boundary = "--" + value.substring(pos + b.length());
 		Log.d(TAG, myId + " identified boundary " + boundary);
 		// okay, ready to start reading data
 		receiveRequestEntity(eyefiRequest);
@@ -389,7 +387,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				Log.d(TAG, myId + " parsed uploadPhoto");
 			} else if(partName.equals("FILENAME")) {
 				EyefiIntegrityDigest checksum = new EyefiIntegrityDigest();
-				TarInputStream tarball = new TarInputStream(new CheckedInputStream(in, checksum));
+				CheckedInputStream c = new CheckedInputStream(in, checksum);
+				TarInputStream tarball = new TarInputStream(c);
 				TarEntry file = tarball.getNextEntry();
 				while(file != null) {
 					fileName = file.getName();
@@ -434,6 +433,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 					Log.d(TAG, myId + " skipping to next entry");
 					file = tarball.getNextEntry();
 				}
+				c.skip(4096);
 				UploadKey uploadKey = getKeyForMac(uploadPhoto.getMacAddress());
 				calculatedDigest = checksum.getValue(uploadKey).toString();
 				Log.d(TAG, myId + " calculated digest " + calculatedDigest);

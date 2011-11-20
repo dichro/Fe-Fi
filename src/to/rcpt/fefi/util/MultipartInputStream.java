@@ -81,7 +81,7 @@ public class MultipartInputStream extends FilterInputStream {
 		int additionalStart = read - boundaryLength + 1;
 		if(additionalStart < 0)
 			additionalStart = 0;
-		int boundaryPosition = match.indexOf(buf, additionalStart, read + additionalRead - additionalStart);
+		int boundaryPosition = match.indexOf(buf, additionalStart, read + additionalRead);
 		//     if found, as above
 		if(boundaryPosition >= 0) {
 			// can has boundary! re-read only up to the end of the boundary

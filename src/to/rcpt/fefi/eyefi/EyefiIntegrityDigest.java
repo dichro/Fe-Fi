@@ -32,7 +32,7 @@ public class EyefiIntegrityDigest implements Checksum {
 			MessageDigest md = MessageDigest.getInstance("MD5");
 			byte[] authentication = md.digest(plaintext);
 			Hexstring hs = new Hexstring(authentication);
-			Log.d(TAG, "calculated " + hs);
+			Log.d(TAG, "calculated " + hs + " after " + numBlocks);
 			return hs;
 		} catch (NoSuchAlgorithmException e) {
 			throw new RuntimeException(e);
@@ -87,5 +87,9 @@ public class EyefiIntegrityDigest implements Checksum {
 		}
 		if(i != off + nbytes)
 			update(buf[i]);
+	}
+
+	public int getNumBlocks() {
+		return blockChecksums.size();
 	}
 }
