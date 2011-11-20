@@ -45,19 +45,16 @@ import to.rcpt.fefi.eyefi.UploadPhotoResponse;
 import to.rcpt.fefi.eyefi.Types.MacAddress;
 import to.rcpt.fefi.eyefi.Types.ServerNonce;
 import to.rcpt.fefi.eyefi.Types.UploadKey;
-import to.rcpt.fefi.util.Hexstring;
 import to.rcpt.fefi.util.MultipartInputStream;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
-import android.database.Cursor;
 import android.media.ExifInterface;
-import android.media.MediaScannerConnection;
-import android.media.MediaScannerConnection.MediaScannerConnectionClient;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.PowerManager;
 import android.os.Vibrator;
+import android.provider.MediaStore;
 import android.provider.MediaStore.Images;
 import android.provider.MediaStore.Images.Media;
 import android.util.Log;
@@ -223,73 +220,6 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		sendResponseEntity(ssr);
 	}
 
-	private class MediaScannerNotifier implements MediaScannerConnectionClient {
-		String projection[] = { Images.ImageColumns.DATE_TAKEN };
-		
-		public MediaScannerNotifier(String path, long id) {
-			_id = id;
-			_path = path;
-			_connection = new MediaScannerConnection(context, this);
-			_connection.connect();
-		}
-
-		public void onMediaScannerConnected() {
-			Log.d(TAG, "launching scanFile " + _path);
-			_connection.scanFile(_path, "image/jpeg");
-		}
-
-		public void onScanCompleted(String path, final Uri uri) {
-			if(uri == null) {
-				Log.e(TAG, "scanFile " + _path + " failed");
-				_connection.disconnect();
-				return;
-			}
-			Log.d(TAG, "done scanFile " + _path);
-			db.finishImage(_id, uri);
-			_connection.disconnect();
-			ContentResolver cr = context.getContentResolver();
-			Cursor cur = cr.query(uri, projection, null, null, null);
-			if(cur.moveToFirst()) {
-				// TODO(dichro): load image offset from card list
-				long dateOffset = 3290;
-				String dateTime = null;
-				try {
-					ExifInterface exif = new ExifInterface(_path);
-					dateTime = exif.getAttribute(ExifInterface.TAG_DATETIME);
-					Log.d(TAG, "exif says " + dateTime);
-				} catch (IOException e) {
-					Log.d(TAG, "exif error " + e);
-					e.printStackTrace();
-				}
-				long revisedDate = -1;
-				if(dateTime != null) {
-					try {
-						SimpleDateFormat sdf = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
-						Date date = sdf.parse(dateTime);
-						Log.d(TAG, "exif timestamp is " + date + " " + date.getTime());
-						revisedDate = date.getTime() + dateOffset * 1000;
-						Log.d(TAG, "revisedDate " + revisedDate + " " + new Date(revisedDate));
-					} catch (ParseException e) {
-						Log.d(TAG, "failed to parse " + dateTime);
-					}
-				}
-				if(revisedDate != -1) {
-					ContentValues cv = new ContentValues();
-					cv.put(Images.ImageColumns.DATE_TAKEN, revisedDate);
-					int updated = cr.update(uri, cv, null, null);
-					Log.d(TAG, "updated " + updated + " rows to timestamp " + revisedDate);
-				}
-			} else {
-				Log.d(TAG, "Weird, returned URI " + uri + " appears to have no data");
-			}
-			cur.close();
-		}
-
-		private MediaScannerConnection _connection;
-		private String _path;
-		long _id;
-	}
-	
 	private void importPhoto(File file, String fileName, long id) {
 		Log.d(TAG, "importing " + fileName + " from " + file);
 		ContentValues values = new ContentValues();
@@ -298,7 +228,39 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		values.put(Media.DESCRIPTION, "Received by Fe-Fi on " + dateFormat.format(now));
 		values.put(Media.TITLE, fileName);
 		values.put(Media.MIME_TYPE, "image/jpeg");
-		values.put(Media.DATA, file.getAbsolutePath());
+		String path = file.getAbsolutePath();
+		values.put(Media.DATA, path);
+		values.put(MediaStore.MediaColumns.SIZE, file.length());
+		values.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg"); // ...right?
+		// TODO(dichro): load image offset from card list
+		long dateOffset = 3290;
+		try {
+			ExifInterface exif = new ExifInterface(path);
+			importDate(exif, values, dateOffset);
+			int orientation = exif.getAttributeInt(
+					ExifInterface.TAG_ORIENTATION, -1);
+			if (orientation != -1) {
+				int degree;
+				switch(orientation) {
+				case ExifInterface.ORIENTATION_ROTATE_90:
+					degree = 90;
+					break;
+				case ExifInterface.ORIENTATION_ROTATE_180:
+					degree = 180;
+					break;
+				case ExifInterface.ORIENTATION_ROTATE_270:
+					degree = 270;
+					break;
+				default:
+					degree = 0;
+					break;
+				}
+				values.put(Images.Media.ORIENTATION, degree);
+			}
+		} catch (IOException e) {
+			Log.d(TAG, "exif error " + e);
+			e.printStackTrace();
+		}
 		
 		File folder = file.getParentFile();
 		values.put(Media.BUCKET_ID,
@@ -309,20 +271,39 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		ContentResolver cr = context.getContentResolver();
 		Uri uri = cr.insert(Media.EXTERNAL_CONTENT_URI, values);
 		Log.d(TAG, "inserted values to uri " + uri);
-		new MediaScannerNotifier(file.getAbsolutePath(), id);
 		Vibrator v = (Vibrator)context.getSystemService(Context.VIBRATOR_SERVICE);
 		v.vibrate(300);
+	}
+
+	private void importDate(ExifInterface exif, ContentValues values,
+			long dateOffset) {
+		String dateTime;
+		dateTime = exif.getAttribute(ExifInterface.TAG_DATETIME);
+		Log.d(TAG, "exif says " + dateTime);
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
+		try {
+			Date date = sdf.parse(dateTime);
+			Log.d(TAG, "exif timestamp is " + date + " " + date.getTime());
+			long revisedDate = date.getTime() + dateOffset * 1000;
+			Log.d(TAG, "revisedDate " + revisedDate + " " + new Date(revisedDate));
+			values.put(Images.Media.DATE_TAKEN, revisedDate);
+		} catch (ParseException e) {
+			Log.d(TAG, "failed to parse " + dateTime);
+		}
 	}
 	
 	private void copyToLocalFile(TarInputStream tarball, File destination) throws IOException {
 		OutputStream out = new FileOutputStream(destination);
 		Log.d(TAG, "shuffling data to " + destination);
 		long t1 = System.currentTimeMillis();
+		long bytes = tarball.available();
 		tarball.copyEntryContents(out);
 		out.close();
 		long t2 = System.currentTimeMillis();
 		long delta = t2 - t1;
-		Log.d(TAG, "done with copy after " + delta + " ms ");
+		if(delta == 0)
+			delta = 1;
+		Log.d(TAG, "copied " + bytes + " in " + delta + "ms; " + (1000 * bytes / delta) + " K/s");
 	}
 	
 	public void uploadPhoto(HttpRequest request) 
