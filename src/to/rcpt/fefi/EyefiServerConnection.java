@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.Vector;
 import java.util.zip.CheckedInputStream;
 
 import org.apache.http.ConnectionClosedException;
@@ -349,6 +350,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		long id = -1;
 		boolean success = false;
 		String readDigest = null, calculatedDigest = null;
+		Vector<File> written = new Vector<File>();
 		while(!headers.isEmpty()) {
 			String contentDisposition = headers.get("Content-Disposition");
 			if(contentDisposition == null)
@@ -375,6 +377,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 						Log.d(TAG, "Found logfile " + fileName);
 						File destination = openWritableFile(id, "log");
 						copyToLocalFile(tarball, destination);
+						written.add(destination);
 					} else {
 						Log.d(TAG, "Processing image file " + fileName);
 						if(uploadPhoto == null) {
@@ -398,6 +401,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 							Log.d(TAG, "want to write " + imageName + " to " + destinationPath);
 							copyToLocalFile(tarball, destinationPath);
 							importPhoto(destinationPath, fileName, id);
+							written.add(destinationPath);
 							success = true;
 						} catch(IOException e) {
 							Log.e(TAG, "IO fail " + e);						
@@ -414,7 +418,6 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				UploadKey uploadKey = getKeyForMac(uploadPhoto.getMacAddress());
 				calculatedDigest = checksum.getValue(uploadKey).toString();
 				Log.d(TAG, "calculated digest " + calculatedDigest);
-				// TODO: check integrity?
 			} else if(partName.equals("INTEGRITYDIGEST")) {
 				BufferedReader r = new BufferedReader(new InputStreamReader(in));
 				readDigest = r.readLine();
@@ -425,18 +428,21 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		}
 		if(calculatedDigest == null) {
 			Log.d(TAG, "failed to calculate a digest, rejecting");
-			return;
+			success = false;
 		}
 		if(readDigest == null) {
 			Log.d(TAG, "failed to receive a digest, rejecting");
-			return;
+			success = false;
 		}
-		if(!readDigest.equals(calculatedDigest)) {
+		if(success && !readDigest.equals(calculatedDigest)) {
 			Log.d(TAG, "received digest does not match calculated digest, rejecting");
-			return;
+			success = false;
 		}
-		if(destinationPath != null)
+		if(success && destinationPath != null)
 			db.receiveImage(id, imageName, destinationPath.toString());
+		if(!success)
+			for(File f : written)
+				f.delete();
 		UploadPhotoResponse response = new UploadPhotoResponse(success);
 		sendResponseHeader(response);
 		sendResponseEntity(response);
