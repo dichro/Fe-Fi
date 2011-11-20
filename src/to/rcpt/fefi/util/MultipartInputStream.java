@@ -1,24 +1,29 @@
 package to.rcpt.fefi.util;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.FilterInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Map;
 
 import android.util.Log;
 
 public class MultipartInputStream extends FilterInputStream {
-	KMPMatch match;
-	String boundary;
-	int bufSize = 256 * 1024;
-	int maxRead;
-	byte[] buf;
-	boolean isEof = true;
+	private KMPMatch match;
+	private String currentBoundary, originalBoundary;
+	private int bufSize = 256 * 1024;
+	private int maxRead;
+	private byte[] buf;
+	private boolean isEof = true;
 	private static final String TAG = "MultipartInputStream";
 	private int boundaryLength;
 	
 	public MultipartInputStream(BufferedInputStream is, String boundary) {
 		super(is);
 		buf = new byte[bufSize];
+		originalBoundary = boundary;
 		setBoundary(boundary);
 	}
 	
@@ -26,10 +31,10 @@ public class MultipartInputStream extends FilterInputStream {
 		// must be called only when buffer has been read.
 		if(!isEof)
 			throw new RuntimeException("bah, humbug");
-		boundary = b;
-		byte[] pattern = boundary.getBytes();
+		currentBoundary = b;
+		byte[] pattern = currentBoundary.getBytes();
 		match = new KMPMatch(pattern);
-		boundaryLength = boundary.length();
+		boundaryLength = currentBoundary.length();
 		if(boundaryLength > (bufSize / 2))
 			throw new RuntimeException("boundary string too long");
 		maxRead = bufSize - boundaryLength;
@@ -62,7 +67,7 @@ public class MultipartInputStream extends FilterInputStream {
 				return boundaryPosition > 0 ? boundaryPosition : -1;
 			}
 		}
-		//   otherwise read boundaryLength more into the buffer, recheck for presence
+		// check for a boundary that extends beyond the end of the buffer
 		in.mark(boundaryLength);
 		int additionalRead = in.read(buf, read, boundaryLength - 1);
 		if(additionalRead == -1) {
@@ -92,9 +97,11 @@ public class MultipartInputStream extends FilterInputStream {
 	
 	public void close() throws IOException {
 		// reads to next boundary or EOF
+		long discarded = 0;
 		while(!isEof) {
-			readChunk(maxRead);
+			discarded += readChunk(maxRead);
 		}
+		Log.d(TAG, "discarded " + discarded + " in close");
 	}
 	
 	public void mark(int readlimit) {
@@ -148,5 +155,20 @@ public class MultipartInputStream extends FilterInputStream {
 			skipped += read;
 		}
 		return skipped;
+	}
+	
+	public Map<String, String> getHeaders() throws IOException {
+		Map<String, String> headers = new HashMap<String, String>();
+		setBoundary("\r\n\r\n");
+		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+		String line = reader.readLine();
+		while(line != null) {
+			int pos = line.indexOf(": ");
+			if(pos > 0)
+				headers.put(line.substring(0, pos), line.substring(pos + 2));
+			line = reader.readLine();
+		}
+		setBoundary("\r\n" + originalBoundary);
+		return headers;
 	}
 }

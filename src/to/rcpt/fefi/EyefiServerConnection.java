@@ -5,6 +5,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
@@ -64,7 +65,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	public static final String TAG = "EyefiServerConnection";
 	private ServerNonce serverNonce = new ServerNonce("deadbeefdeadbeefdeadbeefdeadbeef");
 	EyefiReceiverService context;
-	private static final String CONTENT_DISPOSITION_PREAMBLE = "form-data; name=\"";
+	public static final String CONTENT_DISPOSITION_PREAMBLE = "form-data; name=\"";
 	private static final String URN_GETPHOTOSTATUS = "\"urn:GetPhotoStatus\"";
 	private static final String URN_STARTSESSION = "\"urn:StartSession\"";
 	private static final String URN_LAST = "\"urn:MarkLastPhotoInRoll\"";
@@ -343,11 +344,24 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		// okay, ready to start reading data
 		receiveRequestEntity(eyefiRequest);
 		HttpEntity entity = eyefiRequest.getEntity();
+//		if(true) {
+//			File f = openWritableFile(myId, "foo");
+//			InputStream in = entity.getContent();
+//			OutputStream out = new FileOutputStream(f);
+//			byte[] b2 = new byte[60000];
+//			int read;
+//			while ((read = in.read(b2)) != -1) {
+//				out.write(b2, 0, read);
+//			}
+//			out.close();
+//			Log.d(TAG, "done copying " + myId);
+//			return;
+//		}
 		MultipartInputStream in = new MultipartInputStream(
 				new BufferedInputStream(entity.getContent(), 400000), boundary);
 		// find first boundary; should be at start
 		in.close();
-		Map<String, String> headers = getHeaders(in, boundary);
+		Map<String, String> headers = in.getHeaders();
 		UploadPhoto uploadPhoto = null;
 		String fileSignature = null;
 		String imageName = null;
@@ -356,7 +370,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		boolean success = false;
 		String readDigest = null, calculatedDigest = null;
 		Vector<File> written = new Vector<File>();
-		Uri uri = null;
+		String fileName = null;
 		while(!headers.isEmpty()) {
 			String contentDisposition = headers.get("Content-Disposition");
 			if(contentDisposition == null)
@@ -378,14 +392,14 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				TarInputStream tarball = new TarInputStream(new CheckedInputStream(in, checksum));
 				TarEntry file = tarball.getNextEntry();
 				while(file != null) {
-					String fileName = file.getName();
+					fileName = file.getName();
+					Log.d(TAG, myId + " tarred file " + fileName + " " + file.getSize() + "b");
+					// TODO(dichro): sanitize filename.
 					if(fileName.endsWith(".log")) {
-						Log.d(TAG, myId + " Found logfile " + fileName);
 						File destination = openWritableFile(id, "log");
 						copyToLocalFile(tarball, destination);
 						written.add(destination);
 					} else {
-						Log.d(TAG, myId + " Processing image file " + fileName);
 						if(uploadPhoto == null) {
 							Log.d(TAG, myId + " ...but no uploadPhoto");
 							break;
@@ -406,7 +420,6 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 							destinationPath = openWritableFile(id, "JPG");
 							Log.d(TAG, myId + " want to write " + imageName + " to " + destinationPath);
 							copyToLocalFile(tarball, destinationPath);
-							uri = importPhoto(destinationPath, fileName, id);
 							written.add(destinationPath);
 							success = true;
 						} catch(IOException e) {
@@ -430,7 +443,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				Log.d(TAG, myId + " read digest " + readDigest);
 			}
 			in.close();
-			headers = getHeaders(in, boundary);
+			headers = in.getHeaders();
 		}
 		if(calculatedDigest == null) {
 			Log.d(TAG, myId + " failed to calculate a digest, rejecting");
@@ -445,6 +458,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			success = false;
 		}
 		if(success && destinationPath != null) {
+			Uri uri = importPhoto(destinationPath, fileName, id);
 			db.receiveImage(id, imageName, destinationPath.toString());
 			db.finishImage(id, uri);
 		}
@@ -464,21 +478,4 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		destinationPath.getParentFile().mkdirs();
 		return destinationPath;
 	}
-
-	public Map<String, String> getHeaders(MultipartInputStream in, String boundary) 
-			throws IOException {
-		Map<String, String> headers = new HashMap<String, String>();
-		in.setBoundary("\r\n\r\n");
-		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-		String line = reader.readLine();
-		while(line != null) {
-			int pos = line.indexOf(": ");
-			if(pos > 0)
-				headers.put(line.substring(0, pos), line.substring(pos + 2));
-			line = reader.readLine();
-		}
-		in.setBoundary("\r\n" + boundary);
-		return headers;
-	}
-
 }
