@@ -68,8 +68,10 @@ public class EyefiReceiverService extends Service implements Runnable {
 				return;
 			updating = false;
 			locationManager.removeUpdates(this);
-			if(wakeLock.isHeld())
-				wakeLock.release();
+			// releasing timer wakelocks is broken
+			// http://code.google.com/p/android/issues/detail?id=14184
+//			if(wakeLock.isHeld())
+//				wakeLock.release();
 			Looper.myLooper().quit(); // this is retarded
 		}
 

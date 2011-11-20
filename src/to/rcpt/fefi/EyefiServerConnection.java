@@ -70,16 +70,20 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	private static final String URN_LAST = "\"urn:MarkLastPhotoInRoll\"";
 	private DBAdapter db;
 	
+	private static int id = 0;
+	private int myId;
+	
 	public static EyefiServerConnection makeConnection(EyefiReceiverService c, Socket s) throws IOException {
 		s.setReceiveBufferSize(256 * 1024);
-		EyefiServerConnection me = new EyefiServerConnection(c);
+		EyefiServerConnection me = new EyefiServerConnection(c, id++);
 		BasicHttpParams params = new BasicHttpParams();
 		params.setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE, 256 * 1024);
 		me.bind(s, params);
 		return me;
 	}
 	
-	protected EyefiServerConnection(EyefiReceiverService c) {
+	protected EyefiServerConnection(EyefiReceiverService c, int id) {
+		myId = id;
 		context = c;
 		db = context.getDatabase();
 		byte buf[] = new byte[16];
@@ -99,7 +103,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	
 	public void getPhotoStatus(HttpRequest request)
 			throws HttpException, IOException {
-		Log.d(TAG, "getPhotoStatus");
+		Log.d(TAG, myId + " getPhotoStatus");
 		if (!(request instanceof HttpEntityEnclosingRequest))
 			throw new RuntimeException(); // TODO: something useful
 		HttpEntityEnclosingRequest eyefiRequest = (HttpEntityEnclosingRequest) request;
@@ -115,7 +119,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			if(uploadKey != null) {
 				photoStatus.authenticate(uploadKey, serverNonce);
 					long id = db.addNewKeyWithMac(mac, uploadKey);
-					Log.d(TAG, "registered " + mac + " with id " + id);
+					Log.d(TAG, myId + " registered " + mac + " with id " + id);
 					context.registerNewCard(mac, uploadKey, id);
 			} else {
 				close();
@@ -126,10 +130,10 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		String filesignature = photoStatus.getParameter("filesignature");
 		long id = db.imageExists(filesignature);
 		if(id != -1) {
-			Log.i(TAG, "image " + filesignature + " exists");
+			Log.i(TAG, myId + " image " + filesignature + " exists");
 			offset = 0;
 		} else {
-			Log.i(TAG, "new image " + filesignature);
+			Log.i(TAG, myId + " new image " + filesignature);
 			db.registerNewImage(filesignature);
 		}
 		// TODO: how to reject an image? offset presumably resumes upload;
@@ -147,13 +151,13 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			wakeLock.acquire();
 
 			while (isOpen()) {
-				Log.d(TAG, "waiting for request");
+				Log.d(TAG, myId + " waiting for request");
 				HttpRequest request = receiveRequestHeader();
 				String uri = request.getRequestLine().getUri();
 				if (uri.equals("/api/soap/eyefilm/v1")) {
 					Header[] soapActions = request.getHeaders("SOAPAction");
 					if ((soapActions == null) || (soapActions.length == 0)) {
-						Log.e(TAG, "no SOAPAction");
+						Log.e(TAG, myId + " no SOAPAction");
 						close();
 					} else {
 						String action = soapActions[0].getValue();
@@ -171,19 +175,19 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 							close();
 						}
 						else {
-							Log.e(TAG, "unknown SOAPAction: " + action);
+							Log.e(TAG, myId + " unknown SOAPAction: " + action);
 							close();
 						}
 					}
 				} else if (uri.equals("/api/soap/eyefilm/v1/upload")) {
 					uploadPhoto(request);
 				} else {
-					Log.e(TAG, "unknown method " + uri);
+					Log.e(TAG, myId + " unknown method " + uri);
 					close();
 				}
 			}
 		} catch (ConnectionClosedException e) {
-			Log.i(TAG, "client closed");
+			Log.i(TAG, myId + " client closed");
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
@@ -206,7 +210,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		receiveRequestEntity(eyefiRequest);
 		StartSession ss = new StartSession();
 		ss.parse(eyefiRequest.getEntity().getContent());
-		Log.d(TAG, "parsed startsession");
+		Log.d(TAG, myId + " parsed startsession");
 		MacAddress mac = ss.getMacaddress();
 		UploadKey uploadKey = getKeyForMac(mac);
 		if(uploadKey == null)
@@ -222,7 +226,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 	}
 
 	private Uri importPhoto(File file, String fileName, long id) {
-		Log.d(TAG, "importing " + fileName + " from " + file);
+		Log.d(TAG, myId + " importing " + fileName + " from " + file);
 		ContentValues values = new ContentValues();
 		Date now = new Date();
 		DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(context.getApplicationContext());
@@ -259,7 +263,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				values.put(Images.Media.ORIENTATION, degree);
 			}
 		} catch (IOException e) {
-			Log.d(TAG, "exif error " + e);
+			Log.d(TAG, myId + " exif error " + e);
 			e.printStackTrace();
 		}
 		
@@ -271,7 +275,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		
 		ContentResolver cr = context.getContentResolver();
 		Uri uri = cr.insert(Media.EXTERNAL_CONTENT_URI, values);
-		Log.d(TAG, "inserted values to uri " + uri);
+		Log.d(TAG, myId + " inserted values to uri " + uri);
 		Vibrator v = (Vibrator)context.getSystemService(Context.VIBRATOR_SERVICE);
 		v.vibrate(300);
 		return uri;
@@ -281,22 +285,22 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			long dateOffset) {
 		String dateTime;
 		dateTime = exif.getAttribute(ExifInterface.TAG_DATETIME);
-		Log.d(TAG, "exif says " + dateTime);
+		Log.d(TAG, myId + " exif says " + dateTime);
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
 		try {
 			Date date = sdf.parse(dateTime);
-			Log.d(TAG, "exif timestamp is " + date + " " + date.getTime());
+			Log.d(TAG, myId + " exif timestamp is " + date + " " + date.getTime());
 			long revisedDate = date.getTime() + dateOffset * 1000;
-			Log.d(TAG, "revisedDate " + revisedDate + " " + new Date(revisedDate));
+			Log.d(TAG, myId + " revisedDate " + revisedDate + " " + new Date(revisedDate));
 			values.put(Images.Media.DATE_TAKEN, revisedDate);
 		} catch (ParseException e) {
-			Log.d(TAG, "failed to parse " + dateTime);
+			Log.d(TAG, myId + " failed to parse " + dateTime);
 		}
 	}
 	
 	private void copyToLocalFile(TarInputStream tarball, File destination) throws IOException {
 		OutputStream out = new FileOutputStream(destination);
-		Log.d(TAG, "shuffling data to " + destination);
+		Log.d(TAG, myId + " shuffling data to " + destination);
 		long t1 = System.currentTimeMillis();
 		long bytes = tarball.available();
 		tarball.copyEntryContents(out);
@@ -305,25 +309,25 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		long delta = t2 - t1;
 		if(delta == 0)
 			delta = 1;
-		Log.d(TAG, "copied " + bytes + " in " + delta + "ms; " + (1000 * bytes / delta) + " K/s");
+		Log.d(TAG, myId + " copied " + bytes + " in " + delta + "ms; " + (1000 * bytes / delta) + " K/s");
 	}
 	
 	public void uploadPhoto(HttpRequest request) 
 			throws HttpException, IOException {
-		Log.d(TAG, "upload " + request.toString());
+		Log.d(TAG, myId + " upload " + request.toString());
 		HttpEntityEnclosingRequest eyefiRequest = (HttpEntityEnclosingRequest) request;
 		Header contentTypes[] = eyefiRequest.getHeaders("Content-type");
 		if(( contentTypes == null) || contentTypes.length < 1) {
-			Log.e(TAG, "no content type in upload request");
+			Log.e(TAG, myId + " no content type in upload request");
 			close();
 		}
 		HeaderElement elements[] = contentTypes[0].getElements();
 		if((elements == null) || elements.length < 1) {
-			Log.e(TAG, "bad content type in upload request");
+			Log.e(TAG, myId + " bad content type in upload request");
 			close();
 		}
 		if(!elements[0].getName().equals("multipart/form-data")) {
-			Log.e(TAG, "content-type not multipart/form-data in upload");
+			Log.e(TAG, myId + " content-type not multipart/form-data in upload");
 			close();
 		}
 		// for some reason, we don't get an element with the boundary. find it manually.
@@ -331,11 +335,11 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		String value = contentTypes[0].getValue();
 		int pos = value.indexOf(b);
 		if(pos < 0) {
-			Log.e(TAG, "no boundary in content-type");
+			Log.e(TAG, myId + " no boundary in content-type");
 			close();
 		}
 		String boundary = "--" + value.substring(pos + b.length()) + "\r\n";
-		Log.d(TAG, "identified boundary " + boundary);
+		Log.d(TAG, myId + " identified boundary " + boundary);
 		// okay, ready to start reading data
 		receiveRequestEntity(eyefiRequest);
 		HttpEntity entity = eyefiRequest.getEntity();
@@ -363,12 +367,12 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			if(endPos < 0)
 				break;
 			String partName = contentDisposition.substring(CONTENT_DISPOSITION_PREAMBLE.length(), endPos);
-			Log.d(TAG, "have part " + partName);
+			Log.d(TAG, myId + " have part " + partName);
 			if(partName.equals("SOAPENVELOPE")) {
 				UploadPhoto u = new UploadPhoto();
 				u.parse(in);
 				uploadPhoto = u;
-				Log.d(TAG, "parsed uploadPhoto");
+				Log.d(TAG, myId + " parsed uploadPhoto");
 			} else if(partName.equals("FILENAME")) {
 				EyefiIntegrityDigest checksum = new EyefiIntegrityDigest();
 				TarInputStream tarball = new TarInputStream(new CheckedInputStream(in, checksum));
@@ -376,14 +380,14 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				while(file != null) {
 					String fileName = file.getName();
 					if(fileName.endsWith(".log")) {
-						Log.d(TAG, "Found logfile " + fileName);
+						Log.d(TAG, myId + " Found logfile " + fileName);
 						File destination = openWritableFile(id, "log");
 						copyToLocalFile(tarball, destination);
 						written.add(destination);
 					} else {
-						Log.d(TAG, "Processing image file " + fileName);
+						Log.d(TAG, myId + " Processing image file " + fileName);
 						if(uploadPhoto == null) {
-							Log.d(TAG, "...but no uploadPhoto");
+							Log.d(TAG, myId + " ...but no uploadPhoto");
 							break;
 						}
 						fileSignature = uploadPhoto.getParameter(EyefiMessage.FILESIGNATURE);
@@ -394,50 +398,50 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 							} catch(DBAdapter.UnknownUpload e) {
 								// some (?) X2 cards have oddness and duplicity in UploadPhoto:filesignature. Fake one up.
 								fileSignature = fileSignature + ":" + fileName;
-								Log.d(TAG, "inexplicably unknown filesignature. X2 card? Faking one up as " + fileSignature);
+								Log.d(TAG, myId + " inexplicably unknown filesignature. X2 card? Faking one up as " + fileSignature);
 								db.registerNewImage(fileSignature);
 								id = db.imageUploadable(fileSignature);								
 							}
-							Log.d(TAG, "image " + fileName + " has signature " + fileSignature + " id " + id);
+							Log.d(TAG, myId + " image " + fileName + " has signature " + fileSignature + " id " + id);
 							destinationPath = openWritableFile(id, "JPG");
-							Log.d(TAG, "want to write " + imageName + " to " + destinationPath);
+							Log.d(TAG, myId + " want to write " + imageName + " to " + destinationPath);
 							copyToLocalFile(tarball, destinationPath);
 							uri = importPhoto(destinationPath, fileName, id);
 							written.add(destinationPath);
 							success = true;
 						} catch(IOException e) {
-							Log.e(TAG, "IO fail " + e);						
+							Log.e(TAG, myId + " IO fail " + e);						
 						} catch(DBAdapter.DuplicateUpload e) {
-							Log.e(TAG, "file exists, ignoring upload but faking success!");
+							Log.e(TAG, myId + " file exists, ignoring upload but faking success!");
 							success = true;
 						} catch(DBAdapter.UnknownUpload e) {
-							Log.e(TAG, "unknown upload! " + uploadPhoto);
+							Log.e(TAG, myId + " unknown upload! " + uploadPhoto);
 						}
 					}
-					Log.d(TAG, "skipping to next entry");
+					Log.d(TAG, myId + " skipping to next entry");
 					file = tarball.getNextEntry();
 				}
 				UploadKey uploadKey = getKeyForMac(uploadPhoto.getMacAddress());
 				calculatedDigest = checksum.getValue(uploadKey).toString();
-				Log.d(TAG, "calculated digest " + calculatedDigest);
+				Log.d(TAG, myId + " calculated digest " + calculatedDigest);
 			} else if(partName.equals("INTEGRITYDIGEST")) {
 				BufferedReader r = new BufferedReader(new InputStreamReader(in));
 				readDigest = r.readLine();
-				Log.d(TAG, "read digest " + readDigest);
+				Log.d(TAG, myId + " read digest " + readDigest);
 			}
 			in.close();
 			headers = getHeaders(in, boundary);
 		}
 		if(calculatedDigest == null) {
-			Log.d(TAG, "failed to calculate a digest, rejecting");
+			Log.d(TAG, myId + " failed to calculate a digest, rejecting");
 			success = false;
 		}
 		if(readDigest == null) {
-			Log.d(TAG, "failed to receive a digest, rejecting");
+			Log.d(TAG, myId + " failed to receive a digest, rejecting");
 			success = false;
 		}
 		if(success && !readDigest.equals(calculatedDigest)) {
-			Log.d(TAG, "received digest does not match calculated digest, rejecting");
+			Log.d(TAG, myId + " received digest does not match calculated digest, rejecting");
 			success = false;
 		}
 		if(success && destinationPath != null) {
