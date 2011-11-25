@@ -49,6 +49,7 @@ import to.rcpt.fefi.util.MultipartInputStream;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Environment;
@@ -237,10 +238,10 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		values.put(MediaStore.MediaColumns.SIZE, file.length());
 		values.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg"); // ...right?
 		// TODO(dichro): load image offset from card list
-		long dateOffset = 3290;
+		long dateOffset = 3290, date = -1;
 		try {
 			ExifInterface exif = new ExifInterface(path);
-			importDate(exif, values, dateOffset);
+			date = importDate(exif, values, dateOffset);
 			int orientation = exif.getAttributeInt(
 					ExifInterface.TAG_ORIENTATION, -1);
 			if (orientation != -1) {
@@ -272,6 +273,14 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		values.put(Media.BUCKET_DISPLAY_NAME,
 				folder.getName().toLowerCase());
 		
+		if(date != -1) {			
+			Cursor c = db.findNearestLocation(date, 900000);
+			if(c != null) {
+				values.put(Images.Media.LATITUDE, c.getFloat(c.getColumnIndex("latitude")));
+				values.put(Images.Media.LONGITUDE, c.getFloat(c.getColumnIndex("longitude")));
+				c.close();
+			}
+		}
 		ContentResolver cr = context.getContentResolver();
 		Uri uri = cr.insert(Media.EXTERNAL_CONTENT_URI, values);
 		Log.d(TAG, myId + " inserted values to uri " + uri);
@@ -280,7 +289,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		return uri;
 	}
 
-	private void importDate(ExifInterface exif, ContentValues values,
+	private long importDate(ExifInterface exif, ContentValues values,
 			long dateOffset) {
 		String dateTime;
 		dateTime = exif.getAttribute(ExifInterface.TAG_DATETIME);
@@ -292,9 +301,11 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			long revisedDate = date.getTime() + dateOffset * 1000;
 			Log.d(TAG, myId + " revisedDate " + revisedDate + " " + new Date(revisedDate));
 			values.put(Images.Media.DATE_TAKEN, revisedDate);
+			return revisedDate;
 		} catch (ParseException e) {
 			Log.d(TAG, myId + " failed to parse " + dateTime);
 		}
+		return -1;
 	}
 	
 	private void copyToLocalFile(TarInputStream tarball, File destination) throws IOException {

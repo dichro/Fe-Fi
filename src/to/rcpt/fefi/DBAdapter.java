@@ -243,6 +243,31 @@ public class DBAdapter extends SQLiteOpenHelper {
 		return c;
 	}
 	
+	public Cursor findNearestLocation(long time, int maxTolerance) {
+		Cursor c = dbh.query(LOCATION, new String[] { "latitude", "longitude", "altitude", "accuracy", "fixtime" },
+				"fixtime >= ? AND fixtime <= ?", new String[] { "" + (time - maxTolerance), "" + (time + maxTolerance) },
+				null, null, "fixtime");
+		if(!c.moveToFirst()) {
+			Log.d(TAG, "No points found for " + time + "/" + maxTolerance);
+			c.close();
+			return null;
+		}
+		long lastDelta = maxTolerance;
+		int index = c.getColumnIndex("fixtime");
+		do {
+			long thisDelta = c.getLong(index) - time;
+			if(thisDelta < 0)
+				thisDelta = -thisDelta;
+			if(thisDelta > lastDelta) {
+				c.moveToPrevious();
+				break;
+			}
+			lastDelta = thisDelta;
+		} while(c.moveToNext());
+		Log.d(TAG, "Point found for " + time + "/" + maxTolerance + "@" + lastDelta);		
+		return c;
+	}
+	
 	public void receiveImage(long id, String name, String path) {
 		ContentValues cv = new ContentValues();
 		cv.put("name", name);
