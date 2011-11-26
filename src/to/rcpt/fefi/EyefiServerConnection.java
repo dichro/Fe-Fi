@@ -238,7 +238,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		values.put(MediaStore.MediaColumns.SIZE, file.length());
 		values.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg"); // ...right?
 		// TODO(dichro): load image offset from card list
-		long dateOffset = 3290, date = -1;
+		long dateOffset = 7200, date = -1;
 		try {
 			ExifInterface exif = new ExifInterface(path);
 			date = importDate(exif, values, dateOffset);
@@ -444,7 +444,10 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 					Log.d(TAG, myId + " skipping to next entry");
 					file = tarball.getNextEntry();
 				}
-				c.skip(4096);
+				long skipped = 0, s;
+				while((s = c.skip(4096)) == 4096)
+					skipped += 4096;
+				Log.d(TAG, "Skipped " + (skipped + s) + " bytes");
 				UploadKey uploadKey = getKeyForMac(uploadPhoto.getMacAddress());
 				calculatedDigest = checksum.getValue(uploadKey).toString();
 				Log.d(TAG, myId + " calculated digest " + calculatedDigest);

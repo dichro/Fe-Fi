@@ -263,7 +263,11 @@ public class DBAdapter extends SQLiteOpenHelper {
 				break;
 			}
 			lastDelta = thisDelta;
-		} while(c.moveToNext());
+			if(!c.moveToNext()) {
+				c.moveToLast();
+				break;
+			}
+		} while(true);
 		Log.d(TAG, "Point found for " + time + "/" + maxTolerance + "@" + lastDelta);		
 		return c;
 	}
