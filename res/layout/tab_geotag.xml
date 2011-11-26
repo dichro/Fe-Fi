@@ -1,0 +1,17 @@
+
+    <TableLayout android:id="@+id/tableLayout1" android:layout_width="fill_parent" android:layout_height="fill_parent" xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical">
+    <TableRow>
+        <CheckBox android:layout_height="wrap_content" android:id="@+id/checkBox1" android:layout_width="wrap_content" android:text="@string/geotag_enable" android:onClick="enableGeotagging"></CheckBox>
+    </TableRow>
+    <TableRow>
+        <TextView android:id="@+id/textView2" android:layout_height="wrap_content" android:layout_width="wrap_content" android:text="@string/geotag_window"></TextView>
+        <EditText android:layout_height="wrap_content" android:inputType="number" android:id="@+id/geotag_offset" android:layout_width="50dip"></EditText>
+        <ImageButton android:src="@android:drawable/ic_menu_save" android:layout_width="match_parent" android:layout_height="match_parent" android:onClick="savePreferences" android:clickable="false" android:id="@+id/save"></ImageButton>
+    </TableRow>
+    <Button android:layout_width="wrap_content" android:id="@+id/button2" android:text="@string/geotag_redo" android:onClick="redoGeotags" android:layout_height="wrap_content"></Button>
+    <TableRow android:id="@+id/tableRow1" android:layout_width="wrap_content" android:layout_height="wrap_content">
+        <TextView android:id="@+id/textView1" android:layout_weight="1" android:layout_height="wrap_content" android:layout_width="wrap_content" android:text="@string/geotag_stored"></TextView>
+        <TextView android:id="@+id/numLocations" android:layout_weight="1" android:layout_height="wrap_content" android:layout_width="wrap_content" android:text="..."></TextView>
+    </TableRow>
+    <Button android:layout_width="wrap_content" android:id="@+id/button1" android:text="@string/geotag_clear" android:onClick="clearSavedLocations" android:layout_height="wrap_content"></Button>
+    </TableLayout>

@@ -11,5 +11,10 @@
 <item>One folder per month</item>
 <item>One folder per day</item>
 </string-array>
+<string name="geotag_enable">Enable Geotagging</string>
+<string name="geotag_window">Max timestamp offset (sec)</string>
+<string name="geotag_stored">Saved locations</string>
+<string name="geotag_clear">Clear saved locations</string>
+<string name="geotag_redo">Recalculate geotags</string>
 
 </resources>

@@ -22,6 +22,7 @@
 <activity android:name="EyefiCardScanActivity"></activity>
 <activity android:name="SettingsActivity"></activity>
 <activity android:name="LocationListActivity"></activity>
+<activity android:name="GeotagActivity"></activity>
 
 <service android:name="EyefiReceiverService"></service>
 <receiver android:name="WifiWatcher">

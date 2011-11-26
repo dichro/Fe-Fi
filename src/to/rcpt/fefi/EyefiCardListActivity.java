@@ -52,9 +52,6 @@ public class EyefiCardListActivity extends ListActivity implements OnClickListen
 			button.setChecked(true);
 			startReceiver();
 		}
-		TextView v = (TextView)findViewById(R.id.numLocations);
-		v.setText(db.countLocations() + "");
-		v.setOnClickListener(new ClickForIntent(this, LocationListActivity.class));
     }
     
 	@Override
