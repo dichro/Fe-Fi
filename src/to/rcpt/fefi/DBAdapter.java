@@ -28,21 +28,6 @@ public class DBAdapter extends SQLiteOpenHelper {
 	private static final String[] idColumns = { "_id" };
 	
 	public static DBAdapter make(Context c) {
-//		try {
-////			String cmd = "/system/bin/chmod 0666 " + adapter.dbh.getPath();
-////			String cmd = "/system/bin/chmod 0771 /data/data/to.rcpt.fefi/databases";
-//			String cmd = "/system/bin/chmod 0660 /data/data/to.rcpt.fefi/databases/FeFi";
-//			Log.d(TAG, "trying " + cmd);
-//			Process p = Runtime.getRuntime().exec(cmd);
-//			Log.d(TAG, "waiting");
-//			p.waitFor();
-//			Log.d(TAG, "done");
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		} catch (InterruptedException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
 		DBAdapter adapter = new DBAdapter(c);
 		adapter.dbh = adapter.getWritableDatabase();
 		return adapter;
@@ -65,6 +50,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 		+ "accuracy REAL,"
 		+ "fixtime INT NOT NULL"
 		+ ");",
+		"ALTER TABLE " + CARDS + " ADD COLUMN offset INT DEFAULT 0;",
 	};
 	
 	@Override
@@ -332,7 +318,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 	}
 	
 	public Cursor getCard(long id) {
-		Cursor c = dbh.query(CARDS, new String[] { "_id", "name", "macAddress" }, 
+		Cursor c = dbh.query(CARDS, new String[] { "_id", "name", "macAddress", "offset" }, 
 				"_id = ?", new String[] { id + "" }, null, null, null);
 		return c;
 	}
@@ -341,9 +327,10 @@ public class DBAdapter extends SQLiteOpenHelper {
 		dbh.delete(CARDS, "_id = ?", new String[] { id + "" });
 	}
 	
-	public void updateCardName(long id, String name) {
+	public void updateCard(long id, String name, int offset) {
 		ContentValues cv = new ContentValues();
 		cv.put("name", name);
+		cv.put("offset", offset);
 		dbh.update(CARDS, cv, "_id = ?", new String[] { id + "" });
 		scheduleBackup();
 	}

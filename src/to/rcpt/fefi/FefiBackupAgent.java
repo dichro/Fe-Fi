@@ -39,10 +39,11 @@ public class FefiBackupAgent extends BackupAgent {
 				outWriter.writeUTF(mac);
 				MacAddress m = new MacAddress(mac);
 				outWriter.writeUTF(db.getUploadKeyForMac(m).toString());
+				outWriter.writeInt(c.getInt(c.getColumnIndex("offset")));
 			} while (c.moveToNext());
 			byte[] buffer = bufStream.toByteArray();
 			int len = buffer.length;
-			data.writeEntityHeader("cards", len);
+			data.writeEntityHeader("cards-v2", len);
 			data.writeEntityData(buffer, len);
 			Log.d(TAG, "Backup done");
 		} finally {
@@ -76,13 +77,36 @@ public class FefiBackupAgent extends BackupAgent {
 							if (db.getUploadKeyForMac(mac) == null) {
 								Log.d(TAG, "adding card " + name + "@" + mac);
 								long id = db.addNewKeyWithMac(mac, uk);
-								db.updateCardName(id, name);
+								db.updateCard(id, name, 0);
 							} else
 								Log.d(TAG, "skipping existing card " + name);
 						}
 					} catch (EOFException e) {
 						// m'kay
 					}
+				} else if(key.equals("cards-v2")) {
+					byte[] buffer = new byte[dataSize];
+					data.readEntityData(buffer, 0, dataSize);
+					DataInputStream in = new DataInputStream(
+							new ByteArrayInputStream(buffer));
+					try {
+						while (true) {
+							String name = in.readUTF();
+							MacAddress mac = new MacAddress(in.readUTF());
+							UploadKey uk = new UploadKey(in.readUTF());
+							int offset = in.readInt();
+							if (db.getUploadKeyForMac(mac) == null) {
+								Log.d(TAG, "adding card " + name + "@" + mac);
+								long id = db.addNewKeyWithMac(mac, uk);
+								db.updateCard(id, name, offset);
+							} else
+								Log.d(TAG, "skipping existing card " + name);
+						}
+					} catch (EOFException e) {
+						// m'kay
+					}
+				} else {
+					Log.e(TAG, "Unknown restore type " + key);
 				}
 			}
 			Log.d(TAG, "Restore done");

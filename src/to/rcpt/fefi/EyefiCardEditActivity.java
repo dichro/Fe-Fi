@@ -12,7 +12,7 @@ import android.widget.TextView;
 
 public class EyefiCardEditActivity extends Activity {
 	
-	private TextView name;
+	private TextView name, offset;
 	private DBAdapter db;
 	private long id;
 	private static final String TAG = "EyefiCardEditActivity";
@@ -34,13 +34,20 @@ public class EyefiCardEditActivity extends Activity {
 		}
 		name = (TextView)findViewById(R.id.card_name);
 		name.setText(c.getString(c.getColumnIndex("name")));
+		offset = (TextView)findViewById(R.id.cardedit_offset);
+		offset.setText("" + c.getInt(c.getColumnIndex("offset")));
 		TextView mac = (TextView)findViewById(R.id.card_macaddress);
 		mac.setText(c.getString(c.getColumnIndex("macAddress")));
 		Button save = (Button)findViewById(R.id.save);
 		save.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				String n = name.getEditableText().toString();
-				db.updateCardName(id, n);
+				String nameValue = name.getEditableText().toString();
+				int offsetValue = 0;
+				try {
+					offsetValue = Integer.parseInt(offset.getText().toString());
+				} catch (NumberFormatException e) {
+				}
+				db.updateCard(id, nameValue, offsetValue);
 				EyefiCardEditActivity.this.finish();
 			}
 		});
