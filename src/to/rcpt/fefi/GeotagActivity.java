@@ -10,6 +10,7 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.provider.MediaStore.Images;
 import android.provider.MediaStore.Images.Media;
 import android.text.Editable;
@@ -88,13 +89,16 @@ public class GeotagActivity extends Activity {
 	private static final int REDO = 0;
 	private static final int COUNT = 1;
 	private static final int UPDATE = 2;
+	private static final int RESULT = 3;
 	
 	public void redoGeotags(View v) {
 		showDialog(REDO);
 	}
 	
 	final Handler countHandler = new Handler() {
-		
+		public void handleMessage(Message msg) {
+			progressDialog.setProgress(msg.arg1);
+		}
 	};
 	
 	@Override
@@ -120,15 +124,26 @@ public class GeotagActivity extends Activity {
 			cd.setCancelable(false);
 			return cd;
 		case UPDATE:
-			ProgressDialog ud = new ProgressDialog(this);
-			ud.setMessage("Updating geotags...");
-            ud.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-			return ud;
+			progressDialog = new ProgressDialog(this);
+			progressDialog.setMessage("Updating geotags...");
+            progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+			return progressDialog;
+		case RESULT:
+			builder = new AlertDialog.Builder(this);
+			builder.setMessage("Found " + next.ok + " locations in " + next.done + " images")
+			.setNegativeButton("OK", new DialogInterface.OnClickListener() {
+				public void onClick(DialogInterface dialog, int which) {
+					removeDialog(RESULT);
+				}
+			});
+			return builder.create();
 		default:
 			return null;
 		}
 	}
 	
+	private ProgressDialog progressDialog = null;
+
 	@Override
 	protected void onPrepareDialog(int id, Dialog d) {
 		switch(id) {
@@ -136,9 +151,8 @@ public class GeotagActivity extends Activity {
 			new ImageCounter().start();
 			break;
 		case UPDATE:
-			ProgressDialog pd = (ProgressDialog)d;
-			pd.setProgress(0);
-			pd.setMax(next.getCount());
+			progressDialog.setProgress(0);
+			progressDialog.setMax(next.getCount());
 			next.start();
 			break;
 		}
@@ -170,9 +184,9 @@ public class GeotagActivity extends Activity {
 		}
 	}
 	
-	
 	private class GeotagUpdater extends Thread {
-		Cursor c;
+		private Cursor c;
+		private int ok = 0, done = 0;
 		
 		GeotagUpdater(Cursor c) {
 			this.c = c;
@@ -180,6 +194,30 @@ public class GeotagActivity extends Activity {
 		
 		@Override
 		public void run() {
+			int index = c.getColumnIndex(Images.Media.DATE_TAKEN);
+			long lastUpdate = System.currentTimeMillis();
+			do {
+				long ctm = System.currentTimeMillis();
+				if(ctm - 100 > lastUpdate) {
+					lastUpdate = ctm;
+					Message m = countHandler.obtainMessage();
+					m.arg1 = done;
+					countHandler.sendMessage(m);
+				}
+				long timestamp = c.getLong(index);
+				Cursor pos = db.findNearestLocation(timestamp, window);
+				done++;
+				if(pos == null)
+					continue;
+				ok++;
+				pos.close();
+			} while(c.moveToNext());
+			runOnUiThread(new Runnable() {
+				public void run() {
+					dismissDialog(UPDATE);
+					showDialog(RESULT);
+				}
+			});
 		}
 		
 		int getCount() {
