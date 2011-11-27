@@ -205,7 +205,7 @@ public class GeotagActivity extends Activity {
 					countHandler.sendMessage(m);
 				}
 				long timestamp = c.getLong(index);
-				Cursor pos = db.findNearestLocation(timestamp, window);
+				Cursor pos = db.findNearestLocation(timestamp, window * 1000);
 				done++;
 				if(pos == null)
 					continue;
@@ -223,5 +223,11 @@ public class GeotagActivity extends Activity {
 		int getCount() {
 			return c.getCount();
 		}
+	}
+
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		db.close();
 	}
 }

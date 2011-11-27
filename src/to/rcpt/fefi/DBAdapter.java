@@ -234,7 +234,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 				"fixtime >= ? AND fixtime <= ?", new String[] { "" + (time - maxTolerance), "" + (time + maxTolerance) },
 				null, null, "fixtime");
 		if(!c.moveToFirst()) {
-			Log.d(TAG, "No points found for " + time + "/" + maxTolerance);
+//			Log.d(TAG, "No points found for " + time + "/" + maxTolerance);
 			c.close();
 			return null;
 		}
@@ -254,7 +254,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 				break;
 			}
 		} while(true);
-		Log.d(TAG, "Point found for " + time + "/" + maxTolerance + "@" + lastDelta);		
+//		Log.d(TAG, "Point found for " + time + "/" + maxTolerance + "@" + lastDelta);
 		return c;
 	}
 	
@@ -291,7 +291,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 	}
 	
 	public UploadKey getUploadKeyForMac(MacAddress mac) {
-		Cursor c = dbh.query(CARDS, new String[] { "uploadKey" }, "macAddress = ?", 
+		Cursor c = dbh.query(CARDS, new String[] { "uploadKey" }, "macAddress = ?",
 				new String[] { mac.toString() }, null, null, null);
 		try {
 			if(!c.moveToFirst()) {
@@ -304,7 +304,22 @@ public class DBAdapter extends SQLiteOpenHelper {
 			c.close();
 		}
 	}
-	
+
+	public int getOffsetForMac(MacAddress mac) {
+		Cursor c = dbh.query(CARDS, new String[] { "offset" }, "macAddress = ?",
+				new String[] { mac.toString() }, null, null, null);
+		try {
+			if(!c.moveToFirst()) {
+				// TODO: throw something
+				return 0;
+			}
+			int uploadKey = c.getInt(c.getColumnIndex("offset"));
+			return uploadKey;
+		} finally {
+			c.close();
+		}
+	}
+
 	public Cursor getUploads() {
 		Cursor c = dbh.query(UPLOADS, new String[] { "_id", "name", "updated", "status", "imageUri" }, 
 				"status > 0", null, null, null, "updated DESC");

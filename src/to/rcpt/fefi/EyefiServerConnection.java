@@ -225,7 +225,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		sendResponseEntity(ssr);
 	}
 
-	private Uri importPhoto(File file, String fileName, long id) {
+	private Uri importPhoto(MacAddress mac, File file, String fileName, long id) {
 		Log.d(TAG, myId + " importing " + fileName + " from " + file);
 		ContentValues values = new ContentValues();
 		Date now = new Date();
@@ -238,7 +238,8 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		values.put(MediaStore.MediaColumns.SIZE, file.length());
 		values.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg"); // ...right?
 		// TODO(dichro): load image offset from card list
-		long dateOffset = 7200, date = -1;
+		long dateOffset = db.getOffsetForMac(mac);
+		long date = -1;
 		try {
 			ExifInterface exif = new ExifInterface(path);
 			date = importDate(exif, values, dateOffset);
@@ -472,7 +473,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 			success = false;
 		}
 		if(success && destinationPath != null) {
-			Uri uri = importPhoto(destinationPath, fileName, id);
+			Uri uri = importPhoto(uploadPhoto.getMacAddress(), destinationPath, fileName, id);
 			db.receiveImage(id, imageName, destinationPath.toString());
 			db.finishImage(id, uri);
 		}
