@@ -1,5 +1,6 @@
 package to.rcpt.fefi;
 
+import to.rcpt.fefi.DBAdapter.Card;
 import android.app.Activity;
 import android.content.Intent;
 import android.database.Cursor;
@@ -12,7 +13,7 @@ import android.widget.TextView;
 
 public class EyefiCardEditActivity extends Activity {
 	
-	private TextView name, offset;
+	private TextView name, offset, stored;
 	private DBAdapter db;
 	private long id;
 	private static final String TAG = "EyefiCardEditActivity";
@@ -25,6 +26,7 @@ public class EyefiCardEditActivity extends Activity {
 		Intent i = getIntent();
 		id = i.getLongExtra("id", -1);
 		db = DBAdapter.make(this);
+		Card card = db.getCardO(id);
 		Cursor c = db.getCard(id);
 		startManagingCursor(c);
 		if(!c.moveToFirst()) {
@@ -36,6 +38,8 @@ public class EyefiCardEditActivity extends Activity {
 		name.setText(c.getString(c.getColumnIndex("name")));
 		offset = (TextView)findViewById(R.id.cardedit_offset);
 		offset.setText("" + c.getInt(c.getColumnIndex("offset")));
+		stored = (TextView)findViewById(R.id.cardedit_stored);
+		stored.setText("" + card.getStoredCount());
 		TextView mac = (TextView)findViewById(R.id.card_macaddress);
 		mac.setText(c.getString(c.getColumnIndex("macAddress")));
 		Button save = (Button)findViewById(R.id.save);
@@ -51,6 +55,10 @@ public class EyefiCardEditActivity extends Activity {
 				EyefiCardEditActivity.this.finish();
 			}
 		});
+	}
+	
+	public void recalculateOffset(View v) {
+		
 	}
 	
 	@Override

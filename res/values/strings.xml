@@ -18,5 +18,6 @@
 <string name="geotag_redo">Recalculate geotags</string>
 <string name="cardedit_offset">Time offset (sec)</string>
 <string name="cardedit_recalculate">Recalculate timestamps</string>
+<string name="cardedit_numimages">Images stored</string>
 
 </resources>

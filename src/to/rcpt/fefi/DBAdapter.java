@@ -51,6 +51,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 		+ "fixtime INT NOT NULL"
 		+ ");",
 		"ALTER TABLE " + CARDS + " ADD COLUMN offset INT DEFAULT 0;",
+		"ALTER TABLE " + UPLOADS + " ADD COLUMN card INT;",
 	};
 	
 	@Override
@@ -365,5 +366,27 @@ public class DBAdapter extends SQLiteOpenHelper {
 			Log.d(TAG, "Scheduling backup failed " + t);
 			t.printStackTrace();
 		}
+	}
+	
+	class Card {
+		private long id;
+
+		private Card(long id) {
+			this.id = id;
+		}
+		
+		public long getStoredCount() {
+			Cursor c = dbh.rawQuery("SELECT COUNT(*) FROM " + UPLOADS + " WHERE card = ?",
+					new String[] { "" + id });
+			if(!c.moveToFirst())
+				return 0;
+			long ret = c.getLong(0);
+			c.close();
+			return ret;
+		}
+	}
+	
+	public Card getCardO(long id) {
+		return new Card(id);
 	}
 }

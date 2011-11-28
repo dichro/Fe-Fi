@@ -25,10 +25,35 @@
 			android:layout_height="wrap_content" android:text="@string/cardedit_offset"/>
 		<EditText android:text="EditText" android:layout_height="wrap_content" android:layout_width="wrap_content" android:inputType="number|numberSigned" android:id="@+id/cardedit_offset"></EditText>
 	</TableRow>
-		
-	<Button android:id="@+id/save"
-		android:textSize="20sp"
-		android:layout_width="fill_parent" android:layout_height="wrap_content"
-		android:text="Save" />
-	<Button android:layout_width="wrap_content" android:id="@+id/button1" android:text="@string/cardedit_recalculate" android:layout_height="wrap_content" android:textSize="20sp"></Button>
+
+	<TableRow
+	    android:id="@+id/TableRow01"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content" >
+
+	    <TextView
+	        android:id="@+id/TextView01"
+	        android:layout_width="fill_parent"
+	        android:layout_height="wrap_content"
+	        android:text="@string/cardedit_numimages"
+	        android:textSize="20sp" />
+
+	    <TextView
+	        android:id="@+id/cardedit_stored"
+	        android:layout_width="fill_parent"
+	        android:layout_height="wrap_content"
+	        android:gravity="right"
+	        android:text="TextView"
+	        android:textSize="20sp" />
+	</TableRow>
+
+	<Button android:layout_width="wrap_content" android:id="@+id/button1" android:text="@string/cardedit_recalculate" android:layout_height="wrap_content" android:textSize="20sp" android:onClick="recalculateOffsets"></Button>
+
+	<Button
+	    android:id="@+id/save"
+	    android:layout_width="fill_parent"
+	    android:layout_height="wrap_content"
+	    android:text="Save"
+	    android:textSize="20sp" />
+
 </TableLayout>
