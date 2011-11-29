@@ -57,7 +57,8 @@ public class EyefiCardEditActivity extends Activity {
 		});
 	}
 	
-	public void recalculateOffset(View v) {
+	public void recalculateOffsets(View v) {
+		card.recalculateMetadata();
 	}
 	
 	@Override

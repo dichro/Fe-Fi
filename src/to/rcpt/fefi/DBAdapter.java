@@ -358,7 +358,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 	}
 	
 	class Card {
-		private long id, offset;
+		private long id, dateOffset;
 		private long myId = 0;
 		private String name, macAddress;
 
@@ -374,7 +374,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 					throw new RuntimeException("no card found");
 				}
 				id = myId = c.getLong(c.getColumnIndex("_id"));
-				offset = c.getLong(c.getColumnIndex("offset"));
+				dateOffset = c.getLong(c.getColumnIndex("offset"));
 				macAddress = c.getString(c.getColumnIndex("macAddress"));
 				name = c.getString(c.getColumnIndex("name"));
 			} finally {
@@ -407,19 +407,13 @@ public class DBAdapter extends SQLiteOpenHelper {
 				observer.notifyImage();
 		}
 
-		private Uri importPhoto(File file, String fileName, long id) {
-			ContentValues values = new ContentValues();
-			Date now = new Date();
-			DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(context.getApplicationContext());
-			values.put(Media.DESCRIPTION, "Received by Fe-Fi on " + dateFormat.format(now));
-			values.put(Media.TITLE, fileName);
-			values.put(Media.MIME_TYPE, "image/jpeg");
+		private void augmentMetadata(ContentValues values, File file) {
 			String path = file.getAbsolutePath();
+			values.put(Media.MIME_TYPE, "image/jpeg");
 			values.put(Media.DATA, path);
 			values.put(MediaStore.MediaColumns.SIZE, file.length());
 			values.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg"); // ...right?
 			// TODO(dichro): load image offset from card list
-			long dateOffset = offset;
 			long date = -1;
 			try {
 				ExifInterface exif = new ExifInterface(path);
@@ -454,15 +448,51 @@ public class DBAdapter extends SQLiteOpenHelper {
 					folder.toString().toLowerCase().hashCode());
 			values.put(Media.BUCKET_DISPLAY_NAME,
 					folder.getName().toLowerCase());
+		}
 
-			if(date != -1) {
-				Cursor c = findNearestLocation(date, 900000);
+		private void augmentLocation(ContentValues values, int window) {
+			Long date = values.getAsLong(Images.Media.DATE_TAKEN);
+			if(date != null) {
+				Cursor c = findNearestLocation(date.longValue(), window);
 				if(c != null) {
 					values.put(Images.Media.LATITUDE, c.getFloat(c.getColumnIndex("latitude")));
 					values.put(Images.Media.LONGITUDE, c.getFloat(c.getColumnIndex("longitude")));
 					c.close();
 				}
 			}
+		}
+
+		public void recalculateMetadata() {
+			Cursor c = dbh.query(UPLOADS, new String[] { "imageUri", "path" }, "card = ?", new String[] { "" + id }, null, null, null);
+			if(!c.moveToFirst())
+				return;
+			try {
+				Log.d(TAG, "recalculating metadata for " + c.getCount() + " images on card " + name);
+				ContentResolver cr = context.getContentResolver();
+				int pathIndex = c.getColumnIndex("path");
+				int uriIndex = c.getColumnIndex("imageUri");
+				do {
+					File f = new File(c.getString(pathIndex));
+					if(!f.exists()) {
+						Log.d(TAG, "While recalculating, " + f.toString() + " file DNE");
+						continue;
+					}
+					ContentValues values = new ContentValues();
+					augmentMetadata(values, f);
+					Uri uri = Uri.parse(c.getString(uriIndex));
+					int done = cr.update(uri, values, null, null);
+					Log.d(TAG, "Updated " + done + " rows against " + uri.toString());
+				} while(c.moveToNext());
+			} finally {
+				c.close();
+			}
+		}
+
+		private Uri importPhoto(File file, String fileName, long id) {
+			ContentValues values = new ContentValues();
+			values.put(Media.TITLE, fileName);
+			augmentMetadata(values, file);
+			augmentLocation(values, 900000);
 			ContentResolver cr = context.getContentResolver();
 			Uri uri = cr.insert(Media.EXTERNAL_CONTENT_URI, values);
 			Log.d(TAG, myId + " inserted values to uri " + uri);
