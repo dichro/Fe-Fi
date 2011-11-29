@@ -259,28 +259,6 @@ public class DBAdapter extends SQLiteOpenHelper {
 		return c;
 	}
 	
-	private void receiveImage(long id, String name, String path) {
-		ContentValues cv = new ContentValues();
-		cv.put("name", name);
-		cv.put("path", path);
-		cv.put("status", 1);
-		cv.put("updated", System.currentTimeMillis());
-		Log.d(TAG, "updating image " + id + ": " + name + " path " + path);
-		dbh.update(UPLOADS, cv, "_id = ?", new String[] { id + "" });
-		if(observer != null)
-			observer.notifyImage();
-	}
-	
-	private void finishImage(long id, Uri uri) {
-		ContentValues cv = new ContentValues();
-		cv.put("status", 2);
-		cv.put("imageUri", uri.toString());
-		Log.d(TAG, "done with image " + id + "@" + uri.toString());
-		dbh.update(UPLOADS, cv, "_id = ?", new String[] { id + "" });
-		if(observer != null)
-			observer.notifyImage();		
-	}
-
 	public long addNewKeyWithMac(MacAddress mac, UploadKey key) {
 		ContentValues cv = new ContentValues();
 		cv.put("uploadKey", key.toString());
@@ -385,9 +363,18 @@ public class DBAdapter extends SQLiteOpenHelper {
 			return ret;
 		}
 
-		public void registerUpload(long id, Uri uri, String name, String path) {
-			receiveImage(id, name, path);
-			finishImage(id, uri);
+		public void registerUpload(long pid, Uri uri, String name, String path) {
+			ContentValues cv = new ContentValues();
+			cv.put("name", name);
+			cv.put("path", path);
+			cv.put("updated", System.currentTimeMillis());
+			cv.put("status", 2);
+			cv.put("imageUri", uri.toString());
+			cv.put("card", id);
+			Log.d(TAG, "done with image " + pid + "@" + uri.toString());
+			dbh.update(UPLOADS, cv, "_id = ?", new String[] { pid + "" });
+			if(observer != null)
+				observer.notifyImage();
 		}
 	}
 
