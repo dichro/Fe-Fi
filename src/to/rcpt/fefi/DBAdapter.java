@@ -5,16 +5,27 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 import to.rcpt.fefi.eyefi.Types.MacAddress;
 import to.rcpt.fefi.eyefi.Types.UploadKey;
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.location.Location;
+import android.media.ExifInterface;
 import android.net.Uri;
+import android.os.Vibrator;
+import android.provider.MediaStore;
+import android.provider.MediaStore.Images;
+import android.provider.MediaStore.Images.Media;
 import android.util.Log;
 
 public class DBAdapter extends SQLiteOpenHelper {
@@ -347,12 +358,30 @@ public class DBAdapter extends SQLiteOpenHelper {
 	}
 	
 	class Card {
-		private long id;
+		private long id, offset;
+		private long myId = 0;
+		private String name, macAddress;
 
-		private Card(long id) {
-			this.id = id;
+		Card(String condition, String ...args) {
+			init(condition, args);
 		}
 		
+		protected void init(String condition, String ...args) {
+			Cursor c = dbh.query(CARDS, new String[] { "_id", "name", "macAddress", "offset" },
+					condition, args, null, null, null);
+			try {
+				if(!c.moveToFirst()) {
+					throw new RuntimeException("no card found");
+				}
+				id = myId = c.getLong(c.getColumnIndex("_id"));
+				offset = c.getLong(c.getColumnIndex("offset"));
+				macAddress = c.getString(c.getColumnIndex("macAddress"));
+				name = c.getString(c.getColumnIndex("name"));
+			} finally {
+				c.close();
+			}
+		}
+
 		public long getStoredCount() {
 			Cursor c = dbh.rawQuery("SELECT COUNT(*) FROM " + UPLOADS + " WHERE card = ?",
 					new String[] { "" + id });
@@ -363,10 +392,11 @@ public class DBAdapter extends SQLiteOpenHelper {
 			return ret;
 		}
 
-		public void registerUpload(long pid, Uri uri, String name, String path) {
+		public void registerUpload(long pid, String name, File path) {
+			Uri uri = importPhoto(path, name, pid);
 			ContentValues cv = new ContentValues();
 			cv.put("name", name);
-			cv.put("path", path);
+			cv.put("path", path.toString());
 			cv.put("updated", System.currentTimeMillis());
 			cv.put("status", 2);
 			cv.put("imageUri", uri.toString());
@@ -376,22 +406,96 @@ public class DBAdapter extends SQLiteOpenHelper {
 			if(observer != null)
 				observer.notifyImage();
 		}
+
+		private Uri importPhoto(File file, String fileName, long id) {
+			ContentValues values = new ContentValues();
+			Date now = new Date();
+			DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(context.getApplicationContext());
+			values.put(Media.DESCRIPTION, "Received by Fe-Fi on " + dateFormat.format(now));
+			values.put(Media.TITLE, fileName);
+			values.put(Media.MIME_TYPE, "image/jpeg");
+			String path = file.getAbsolutePath();
+			values.put(Media.DATA, path);
+			values.put(MediaStore.MediaColumns.SIZE, file.length());
+			values.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg"); // ...right?
+			// TODO(dichro): load image offset from card list
+			long dateOffset = offset;
+			long date = -1;
+			try {
+				ExifInterface exif = new ExifInterface(path);
+				date = importDate(exif, values, dateOffset);
+				int orientation = exif.getAttributeInt(
+						ExifInterface.TAG_ORIENTATION, -1);
+				if (orientation != -1) {
+					int degree;
+					switch(orientation) {
+					case ExifInterface.ORIENTATION_ROTATE_90:
+						degree = 90;
+						break;
+					case ExifInterface.ORIENTATION_ROTATE_180:
+						degree = 180;
+						break;
+					case ExifInterface.ORIENTATION_ROTATE_270:
+						degree = 270;
+						break;
+					default:
+						degree = 0;
+						break;
+					}
+					values.put(Images.Media.ORIENTATION, degree);
+				}
+			} catch (IOException e) {
+				Log.d(TAG, myId + " exif error " + e);
+				e.printStackTrace();
+			}
+
+			File folder = file.getParentFile();
+			values.put(Media.BUCKET_ID,
+					folder.toString().toLowerCase().hashCode());
+			values.put(Media.BUCKET_DISPLAY_NAME,
+					folder.getName().toLowerCase());
+
+			if(date != -1) {
+				Cursor c = findNearestLocation(date, 900000);
+				if(c != null) {
+					values.put(Images.Media.LATITUDE, c.getFloat(c.getColumnIndex("latitude")));
+					values.put(Images.Media.LONGITUDE, c.getFloat(c.getColumnIndex("longitude")));
+					c.close();
+				}
+			}
+			ContentResolver cr = context.getContentResolver();
+			Uri uri = cr.insert(Media.EXTERNAL_CONTENT_URI, values);
+			Log.d(TAG, myId + " inserted values to uri " + uri);
+			Vibrator v = (Vibrator)context.getSystemService(Context.VIBRATOR_SERVICE);
+			v.vibrate(300);
+			return uri;
+		}
+
+		private long importDate(ExifInterface exif, ContentValues values,
+				long dateOffset) {
+			String dateTime;
+			dateTime = exif.getAttribute(ExifInterface.TAG_DATETIME);
+			Log.d(TAG, myId + " exif says " + dateTime);
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
+			try {
+				Date date = sdf.parse(dateTime);
+				Log.d(TAG, myId + " exif timestamp is " + date + " " + date.getTime());
+				long revisedDate = date.getTime() + dateOffset * 1000;
+				Log.d(TAG, myId + " revisedDate " + revisedDate + " " + new Date(revisedDate));
+				values.put(Images.Media.DATE_TAKEN, revisedDate);
+				return revisedDate;
+			} catch (ParseException e) {
+				Log.d(TAG, myId + " failed to parse " + dateTime);
+			}
+			return -1;
+		}
 	}
 
 	public Card getCardO(long id) {
-		return new Card(id);
+		return new Card("_id = ?", "" + id);
 	}
 
 	public Card getCardO(MacAddress mac) {
-		Cursor c = dbh.query(CARDS, new String[] { "_id" }, "macAddress = ?",
-				new String[] { mac.toString() }, null, null, null);
-		try {
-			if(!c.moveToFirst()) {
-				throw new RuntimeException("no card found");
-			}
-			return new Card(c.getInt(c.getColumnIndex("_id")));
-		} finally {
-			c.close();
-		}
+		return new Card("macAddress = ?", mac.toString());
 	}
 }
