@@ -12,11 +12,11 @@ import android.widget.Button;
 import android.widget.TextView;
 
 public class EyefiCardEditActivity extends Activity {
-	
 	private TextView name, offset, stored;
 	private DBAdapter db;
 	private long id;
 	private static final String TAG = "EyefiCardEditActivity";
+	private Card card;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -26,7 +26,7 @@ public class EyefiCardEditActivity extends Activity {
 		Intent i = getIntent();
 		id = i.getLongExtra("id", -1);
 		db = DBAdapter.make(this);
-		Card card = db.getCardO(id);
+		card = db.getCardO(id);
 		Cursor c = db.getCard(id);
 		startManagingCursor(c);
 		if(!c.moveToFirst()) {
@@ -58,7 +58,6 @@ public class EyefiCardEditActivity extends Activity {
 	}
 	
 	public void recalculateOffset(View v) {
-		
 	}
 	
 	@Override

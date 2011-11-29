@@ -32,7 +32,7 @@ public class IncomingImagesActivity extends ListActivity {
 			SimpleCursorAdapter.ViewBinder {
 		private ContentResolver cr;
 		String projection[] = { 
-				Images.ImageColumns.DATE_TAKEN,
+				Images.Media.DATE_TAKEN,
 				Images.ImageColumns.LONGITUDE,
 				Images.ImageColumns.LATITUDE,
 		};
@@ -64,7 +64,7 @@ public class IncomingImagesActivity extends ListActivity {
 				// error for the above?
 				Cursor c = cr.query(uri, projection, null, null, null);
 				if(c.moveToFirst()) {
-					tv.setText(DateFormat.format("yyyy-MM-dd kk:mm:ss", c.getLong(c.getColumnIndex(Images.ImageColumns.DATE_TAKEN))));
+					tv.setText(DateFormat.format("yyyy-MM-dd kk:mm:ss", c.getLong(c.getColumnIndex(Images.Media.DATE_TAKEN))));
 					latitude.setText(c.getString(c.getColumnIndex(Images.ImageColumns.LATITUDE)));
 					longitude.setText(c.getString(c.getColumnIndex(Images.ImageColumns.LONGITUDE)));
 				} else {
