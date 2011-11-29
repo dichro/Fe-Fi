@@ -259,7 +259,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 		return c;
 	}
 	
-	public void receiveImage(long id, String name, String path) {
+	private void receiveImage(long id, String name, String path) {
 		ContentValues cv = new ContentValues();
 		cv.put("name", name);
 		cv.put("path", path);
@@ -271,7 +271,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 			observer.notifyImage();
 	}
 	
-	public void finishImage(long id, Uri uri) {
+	private void finishImage(long id, Uri uri) {
 		ContentValues cv = new ContentValues();
 		cv.put("status", 2);
 		cv.put("imageUri", uri.toString());
@@ -384,9 +384,27 @@ public class DBAdapter extends SQLiteOpenHelper {
 			c.close();
 			return ret;
 		}
+
+		public void registerUpload(long id, Uri uri, String name, String path) {
+			receiveImage(id, name, path);
+			finishImage(id, uri);
+		}
 	}
-	
+
 	public Card getCardO(long id) {
 		return new Card(id);
+	}
+
+	public Card getCardO(MacAddress mac) {
+		Cursor c = dbh.query(CARDS, new String[] { "_id" }, "macAddress = ?",
+				new String[] { mac.toString() }, null, null, null);
+		try {
+			if(!c.moveToFirst()) {
+				throw new RuntimeException("no card found");
+			}
+			return new Card(c.getInt(c.getColumnIndex("_id")));
+		} finally {
+			c.close();
+		}
 	}
 }

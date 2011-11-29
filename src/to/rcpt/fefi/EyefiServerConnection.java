@@ -33,6 +33,7 @@ import org.apache.http.params.CoreConnectionPNames;
 import org.apache.tools.tar.TarEntry;
 import org.apache.tools.tar.TarInputStream;
 
+import to.rcpt.fefi.DBAdapter.Card;
 import to.rcpt.fefi.eyefi.EyefiIntegrityDigest;
 import to.rcpt.fefi.eyefi.EyefiMessage;
 import to.rcpt.fefi.eyefi.GetPhotoStatus;
@@ -381,6 +382,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		String readDigest = null, calculatedDigest = null;
 		Vector<File> written = new Vector<File>();
 		String fileName = null;
+		Card card = null;
 		while(!headers.isEmpty()) {
 			String contentDisposition = headers.get("Content-Disposition");
 			if(contentDisposition == null)
@@ -397,6 +399,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				u.parse(in);
 				uploadPhoto = u;
 				Log.d(TAG, myId + " parsed uploadPhoto");
+				card = db.getCardO(u.getMacAddress());
 			} else if(partName.equals("FILENAME")) {
 				EyefiIntegrityDigest checksum = new EyefiIntegrityDigest();
 				CheckedInputStream c = new CheckedInputStream(in, checksum);
@@ -474,8 +477,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 		}
 		if(success && destinationPath != null) {
 			Uri uri = importPhoto(uploadPhoto.getMacAddress(), destinationPath, fileName, id);
-			db.receiveImage(id, imageName, destinationPath.toString());
-			db.finishImage(id, uri);
+			card.registerUpload(id, uri, imageName, destinationPath.toString());
 		}
 		if(!success)
 			for(File f : written)
