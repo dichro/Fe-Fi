@@ -5,7 +5,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -385,7 +384,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 		}
 
 		public int getStoredCount() {
-			Cursor c = dbh.rawQuery("SELECT COUNT(*) FROM " + UPLOADS + " WHERE card = ?",
+			Cursor c = dbh.rawQuery("SELECT COUNT(*) FROM " + UPLOADS + " WHERE card = ? AND status = 2",
 					new String[] { "" + id });
 			if(!c.moveToFirst())
 				return 0;
@@ -465,7 +464,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 		}
 
 		public void recalculateMetadata(Progress p) {
-			Cursor c = dbh.query(UPLOADS, new String[] { "imageUri", "path" }, "card = ?", new String[] { "" + id }, null, null, null);
+			Cursor c = dbh.query(UPLOADS, new String[] { "imageUri", "path" }, "card = ? AND status = 2", new String[] { "" + id }, null, null, null);
 			if(!c.moveToFirst())
 				return;
 			int total, done = 0, ok = 0;
@@ -476,14 +475,24 @@ public class DBAdapter extends SQLiteOpenHelper {
 				int uriIndex = c.getColumnIndex("imageUri");
 				do {
 					done++;
-					File f = new File(c.getString(pathIndex));
+					String path = c.getString(pathIndex);
+					if(path == null) {
+						Log.d(TAG, "While recalculating, path null");
+						continue;
+					}
+					File f = new File(path);
 					if(!f.exists()) {
 						Log.d(TAG, "While recalculating, " + f.toString() + " file DNE");
 						continue;
 					}
 					ContentValues values = new ContentValues();
 					augmentMetadata(values, f);
-					Uri uri = Uri.parse(c.getString(uriIndex));
+					String string = c.getString(uriIndex);
+					if(string == null) {
+						Log.d(TAG, "While recalculating, uriIndex null");
+						continue;
+					}
+					Uri uri = Uri.parse(string);
 					if(cr.update(uri, values, null, null) > 0)
 						ok++;
 					p.updateProgress(total, done, ok);

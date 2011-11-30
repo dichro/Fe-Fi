@@ -66,19 +66,17 @@ public class EyefiCardEditActivity extends Activity {
 	
 	class Foo extends Handler implements Runnable, Progress {
 		ProgressDialog pd;
-		long lastUpdate = 0, interval = 100000;
+		long lastUpdate = 0, interval = 100;
 		int total = 0, done = 0, ok = 0;
 
 		public void updateProgress(int total, int done, int ok) {
 			this.total = total;
 			this.done = done;
 			this.ok = ok;
-			Log.d(TAG, "uP " + total + " " + done + " " + ok);
 			long now = System.currentTimeMillis();
 			if((done < total) && (now - interval < lastUpdate))
 				return;
 			lastUpdate = now;
-			Log.d(TAG, "message " + done + " " + total);
 			Message m = obtainMessage();
 			m.arg1 = done;
 			m.arg2 = total;
@@ -86,7 +84,6 @@ public class EyefiCardEditActivity extends Activity {
 		}
 		
 		public void handleMessage(Message m) {
-			Log.d(TAG, "msg received " + m.arg1 + "  " + m.arg2);
 			pd.setProgress(m.arg1);
 			if(m.arg1 == m.arg2) {
 				dismissDialog(0);
