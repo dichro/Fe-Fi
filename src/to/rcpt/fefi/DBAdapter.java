@@ -467,7 +467,6 @@ public class DBAdapter extends SQLiteOpenHelper {
 			if(!c.moveToFirst())
 				return;
 			try {
-				Log.d(TAG, "recalculating metadata for " + c.getCount() + " images on card " + name);
 				ContentResolver cr = context.getContentResolver();
 				int pathIndex = c.getColumnIndex("path");
 				int uriIndex = c.getColumnIndex("imageUri");
@@ -480,8 +479,7 @@ public class DBAdapter extends SQLiteOpenHelper {
 					ContentValues values = new ContentValues();
 					augmentMetadata(values, f);
 					Uri uri = Uri.parse(c.getString(uriIndex));
-					int done = cr.update(uri, values, null, null);
-					Log.d(TAG, "Updated " + done + " rows against " + uri.toString());
+					cr.update(uri, values, null, null);
 				} while(c.moveToNext());
 			} finally {
 				c.close();
@@ -505,13 +503,10 @@ public class DBAdapter extends SQLiteOpenHelper {
 				long dateOffset) {
 			String dateTime;
 			dateTime = exif.getAttribute(ExifInterface.TAG_DATETIME);
-			Log.d(TAG, myId + " exif says " + dateTime);
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
 			try {
 				Date date = sdf.parse(dateTime);
-				Log.d(TAG, myId + " exif timestamp is " + date + " " + date.getTime());
 				long revisedDate = date.getTime() + dateOffset * 1000;
-				Log.d(TAG, myId + " revisedDate " + revisedDate + " " + new Date(revisedDate));
 				values.put(Images.Media.DATE_TAKEN, revisedDate);
 				return revisedDate;
 			} catch (ParseException e) {
