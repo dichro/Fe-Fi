@@ -82,6 +82,7 @@ public class EyefiCardEditActivity extends Activity {
 			Message m = obtainMessage();
 			m.arg1 = done;
 			m.arg2 = total;
+			sendMessage(m);
 		}
 		
 		public void handleMessage(Message m) {
