@@ -382,12 +382,12 @@ public class DBAdapter extends SQLiteOpenHelper {
 			}
 		}
 
-		public long getStoredCount() {
+		public int getStoredCount() {
 			Cursor c = dbh.rawQuery("SELECT COUNT(*) FROM " + UPLOADS + " WHERE card = ?",
 					new String[] { "" + id });
 			if(!c.moveToFirst())
 				return 0;
-			long ret = c.getLong(0);
+			int ret = c.getInt(0);
 			c.close();
 			return ret;
 		}
@@ -462,15 +462,18 @@ public class DBAdapter extends SQLiteOpenHelper {
 			}
 		}
 
-		public void recalculateMetadata() {
+		public void recalculateMetadata(Progress p) {
 			Cursor c = dbh.query(UPLOADS, new String[] { "imageUri", "path" }, "card = ?", new String[] { "" + id }, null, null, null);
 			if(!c.moveToFirst())
 				return;
+			int total, done = 0, ok = 0;
+			total = c.getCount();
 			try {
 				ContentResolver cr = context.getContentResolver();
 				int pathIndex = c.getColumnIndex("path");
 				int uriIndex = c.getColumnIndex("imageUri");
 				do {
+					done++;
 					File f = new File(c.getString(pathIndex));
 					if(!f.exists()) {
 						Log.d(TAG, "While recalculating, " + f.toString() + " file DNE");
@@ -479,7 +482,9 @@ public class DBAdapter extends SQLiteOpenHelper {
 					ContentValues values = new ContentValues();
 					augmentMetadata(values, f);
 					Uri uri = Uri.parse(c.getString(uriIndex));
-					cr.update(uri, values, null, null);
+					if(cr.update(uri, values, null, null) > 0)
+						ok++;
+					p.updateProgress(total, done, ok);
 				} while(c.moveToNext());
 			} finally {
 				c.close();
@@ -523,4 +528,9 @@ public class DBAdapter extends SQLiteOpenHelper {
 	public Card getCardO(MacAddress mac) {
 		return new Card("macAddress = ?", mac.toString());
 	}
+	
+	public interface Progress {
+		public void updateProgress(int total, int done, int ok);
+	}
+
 }

@@ -1,10 +1,17 @@
 package to.rcpt.fefi;
 
 import to.rcpt.fefi.DBAdapter.Card;
+import to.rcpt.fefi.DBAdapter.Progress;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -57,8 +64,98 @@ public class EyefiCardEditActivity extends Activity {
 		});
 	}
 	
+	class Foo extends Handler implements Runnable, Progress {
+		ProgressDialog pd;
+		long lastUpdate = 0, interval = 100000;
+		int total = 0, done = 0, ok = 0;
+
+		public void updateProgress(int total, int done, int ok) {
+			this.total = total;
+			this.done = done;
+			this.ok = ok;
+			Log.d(TAG, "uP " + total + " " + done + " " + ok);
+			long now = System.currentTimeMillis();
+			if((done < total) && (now - interval < lastUpdate))
+				return;
+			lastUpdate = now;
+			Log.d(TAG, "message " + done + " " + total);
+			Message m = obtainMessage();
+			m.arg1 = done;
+			m.arg2 = total;
+		}
+		
+		public void handleMessage(Message m) {
+			Log.d(TAG, "msg received " + m.arg1 + "  " + m.arg2);
+			pd.setProgress(m.arg1);
+			if(m.arg1 == m.arg2) {
+				dismissDialog(0);
+				showDialog(1);
+			}
+		}
+		
+		public void run() {
+			try {
+				card.recalculateMetadata(this);
+			} finally {
+				runOnUiThread(new Runnable() {
+					public void run() {
+						dismissDialog(0);
+					}
+				});
+			}
+		}
+		
+		Dialog createProgressDialog(String msg) {
+			pd = new ProgressDialog(EyefiCardEditActivity.this);
+			pd.setMessage(msg);
+			pd.setCancelable(false);
+			pd.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+			return pd;
+		}
+		
+		void prepareProgressDialog() {
+			pd.setProgress(0);
+			pd.setMax(card.getStoredCount());
+			new Thread(this).start();
+		}
+		
+		Dialog createSummaryDialog(final int id) {
+			AlertDialog.Builder b = new AlertDialog.Builder(EyefiCardEditActivity.this);
+			b.setMessage(ok + " of " + done + " succeeded");
+			b.setNegativeButton("OK", new DialogInterface.OnClickListener() {
+				public void onClick(DialogInterface dialog, int which) {
+					removeDialog(id);
+				}
+			});
+			return b.create();
+		}
+	}
+	
+	private Foo foo;
+	
+	@Override
+	protected Dialog onCreateDialog(int id) {
+		switch(id) {
+		case 0:
+			return foo.createProgressDialog("Recalculating metadata");
+		case 1:
+			return foo.createSummaryDialog(1);
+		default:
+			return null;
+		}
+	}
+
+	@Override
+	protected void onPrepareDialog(int id, Dialog d) {
+		switch(id) {
+		case 0:
+			foo.prepareProgressDialog();
+		}
+	}
+	
 	public void recalculateOffsets(View v) {
-		card.recalculateMetadata();
+		foo = new Foo();
+		showDialog(0);
 	}
 	
 	@Override
