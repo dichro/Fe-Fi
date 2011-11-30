@@ -63,6 +63,8 @@ public class DBAdapter extends SQLiteOpenHelper {
 		+ ");",
 		"ALTER TABLE " + CARDS + " ADD COLUMN offset INT DEFAULT 0;",
 		"ALTER TABLE " + UPLOADS + " ADD COLUMN card INT;",
+		null,
+		"UPDATE " + UPLOADS + " SET card=(SELECT _id FROM " + CARDS + " LIMIT 1) WHERE card IS NULL;",
 	};
 	
 	@Override
