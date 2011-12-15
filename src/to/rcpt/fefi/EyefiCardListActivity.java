@@ -18,7 +18,6 @@ import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.SimpleCursorAdapter;
-import android.widget.TextView;
 import android.widget.ToggleButton;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
