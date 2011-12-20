@@ -2,8 +2,11 @@ package to.rcpt.fefi;
 
 import java.util.Date;
 
+import android.app.AlertDialog;
 import android.app.ListActivity;
+import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
@@ -109,7 +112,17 @@ public class IncomingImagesActivity extends ListActivity {
     		return;
     	cur.moveToPosition(oldpos); // do I need to do this?
     	Intent i = new Intent(Intent.ACTION_VIEW, u);
-    	startActivity(i);
+    	try {
+    		startActivity(i);
+    	} catch (ActivityNotFoundException e) {
+    		AlertDialog.Builder b = new AlertDialog.Builder(this);
+    		b.setMessage("Failed to start a viewer for this image. The image may have been deleted.")
+    		.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+    			public void onClick(DialogInterface dialog, int which) {
+    				dialog.cancel();
+    			}
+    		}).show();
+    	}
     }
     
     public void notifyImage() {
