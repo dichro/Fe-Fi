@@ -4,7 +4,6 @@ import android.app.ListActivity;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.widget.SimpleCursorAdapter;
-import android.widget.TextView;
 
 public class LocationListActivity extends ListActivity {
 	// TODO(dichro): generalize into a "display cursor c into layout x with item layout y and onclick handler z"

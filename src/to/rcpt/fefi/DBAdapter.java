@@ -415,10 +415,9 @@ public class DBAdapter extends SQLiteOpenHelper {
 			values.put(MediaStore.MediaColumns.SIZE, file.length());
 			values.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg"); // ...right?
 			// TODO(dichro): load image offset from card list
-			long date = -1;
 			try {
 				ExifInterface exif = new ExifInterface(path);
-				date = importDate(exif, values, dateOffset);
+				importDate(exif, values, dateOffset);
 				int orientation = exif.getAttributeInt(
 						ExifInterface.TAG_ORIENTATION, -1);
 				if (orientation != -1) {

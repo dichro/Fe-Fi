@@ -24,7 +24,6 @@ import android.widget.AdapterView.AdapterContextMenuInfo;
 public class EyefiCardListActivity extends ListActivity implements OnClickListener {
     private static final String ENABLE_SERVICE = "enableService";
 	private DBAdapter db;
-    private static final String TAG = "EyefiCardActivity";
 	private Cursor c;
 	private SimpleCursorAdapter adapter;
 	private ToggleButton button;

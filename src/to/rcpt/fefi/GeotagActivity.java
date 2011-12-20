@@ -48,11 +48,8 @@ public class GeotagActivity extends Activity {
 		i.putExtra("to.rcpt.license.feature", feature);
 		i.putExtra("to.rcpt.license.version", 1);
 		try {
-			Log.d(TAG, "sending license intent");
 			startActivityForResult(i, requestCode);
-			Log.d(TAG, "sent intent");
 		} catch(ActivityNotFoundException e) {
-			Log.d(TAG, "activity not found");
 			AlertDialog.Builder b = new AlertDialog.Builder(this);
 			b.setMessage("You need to buy a beta license from the market to use this feature.")
 			 .setPositiveButton("Tell Me More?", new DialogInterface.OnClickListener() {
@@ -66,7 +63,6 @@ public class GeotagActivity extends Activity {
 				}
 			}).show();
 		}
-		Log.d(TAG, "returning false");
 		return false;
 	}
 	

@@ -79,7 +79,6 @@ public class IncomingImagesActivity extends ListActivity {
 
 	private static final String IMAGES_UPDATED = "updated";
 	private DBAdapter db;
-	private static final String TAG = "IncomingImagesActivity";
 	private Cursor c;
 	private SimpleCursorAdapter adapter;
 	

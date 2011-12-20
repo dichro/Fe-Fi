@@ -20,10 +20,8 @@ public class SettingsActivity extends Activity {
 	
 	public static class FefiPreferences {
 		private SharedPreferences preferences;
-		private Context context;
 		
 		public FefiPreferences(Context c) {
-			context = c;
 			preferences = c.getSharedPreferences("default", MODE_PRIVATE);
 		}
 		
