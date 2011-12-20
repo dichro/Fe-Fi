@@ -1,16 +1,12 @@
 package to.rcpt.fefi;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
-import android.content.ActivityNotFoundException;
-import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -24,7 +20,7 @@ import android.widget.CheckBox;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
-public class GeotagActivity extends Activity {
+public class GeotagActivity extends FefiLicensedActivity {
 	private static final String TAG = "Geotag";
 	private DBAdapter db;
 	private SharedPreferences preferences;
@@ -33,37 +29,16 @@ public class GeotagActivity extends Activity {
 	private ImageButton save;
 	
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		if(resultCode != 1)
+			// license acquired, but feature disabled
+			return;
 		switch(requestCode) {
 		case 0:
-			if(resultCode == 1)
-				enableGeotagging();
+			enableGeotagging();
+			break;
+		case 1:
+			redoGeotags();
 		}
-	}
-	
-	boolean checkBetaLicense(int requestCode, String feature) {
-		Log.d(TAG, "checkBetaLicense " + requestCode + " " + feature);
-		Intent i = new Intent();
-		i.setComponent(new ComponentName("to.rcpt.license.fefi", "to.rcpt.license.fefi.LicensingActivity"));
-		i.setAction("to.rcpt.license.CHECK");
-		i.putExtra("to.rcpt.license.feature", feature);
-		i.putExtra("to.rcpt.license.version", 1);
-		try {
-			startActivityForResult(i, requestCode);
-		} catch(ActivityNotFoundException e) {
-			AlertDialog.Builder b = new AlertDialog.Builder(this);
-			b.setMessage("You need to buy a beta license from the market to use this feature.")
-			 .setPositiveButton("Tell Me More?", new DialogInterface.OnClickListener() {
-				public void onClick(DialogInterface dialog, int which) {
-					startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=to.rcpt.license.fefi")));
-				}
-			 })
-			 .setNegativeButton("Never mind!", new DialogInterface.OnClickListener() {
-				public void onClick(DialogInterface dialog, int which) {
-					dialog.cancel();
-				}
-			}).show();
-		}
-		return false;
 	}
 	
 	@Override
@@ -119,7 +94,6 @@ public class GeotagActivity extends Activity {
 	
 	public void enableGeotagging(View v) {
 		CheckBox b = (CheckBox)v;
-		Log.d(TAG, "enableGeo " + b.isChecked());
 		if(b.isChecked()) {
 			if(!checkBetaLicense(0, "enableGeotagging"))
 				b.setChecked(false);
@@ -143,6 +117,11 @@ public class GeotagActivity extends Activity {
 	private static final int RESULT = 3;
 	
 	public void redoGeotags(View v) {
+		if(checkBetaLicense(1, "recalculateGeotags"))
+			redoGeotags();
+	}
+	
+	private void redoGeotags() {
 		showDialog(REDO);
 	}
 	

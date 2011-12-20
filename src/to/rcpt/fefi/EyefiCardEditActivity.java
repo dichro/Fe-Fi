@@ -2,7 +2,6 @@ package to.rcpt.fefi;
 
 import to.rcpt.fefi.DBAdapter.Card;
 import to.rcpt.fefi.DBAdapter.Progress;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
@@ -18,7 +17,7 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 
-public class EyefiCardEditActivity extends Activity {
+public class EyefiCardEditActivity extends FefiLicensedActivity {
 	private TextView name, offset, stored;
 	private DBAdapter db;
 	private long id;
@@ -28,7 +27,6 @@ public class EyefiCardEditActivity extends Activity {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		Log.d(TAG, "started edit ");
 		setContentView(R.layout.card_edit);
 		Intent i = getIntent();
 		id = i.getLongExtra("id", -1);
@@ -151,7 +149,13 @@ public class EyefiCardEditActivity extends Activity {
 		}
 	}
 	
+	
 	public void recalculateOffsets(View v) {
+		if(checkBetaLicense(0, "recalculateGeotags"))
+			recalculateOffsets();
+	}
+	
+	private void recalculateOffsets() {
 		foo = new Foo();
 		showDialog(0);
 	}
@@ -160,5 +164,16 @@ public class EyefiCardEditActivity extends Activity {
 	protected void onDestroy() {
 		super.onDestroy();
 		db.close();
+	}
+	
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		if(resultCode != 1)
+			// license acquired, but feature disabled
+			return;
+		switch(requestCode) {
+		case 0:
+			recalculateOffsets();
+			break;
+		}
 	}
 }
