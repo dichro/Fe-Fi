@@ -46,7 +46,7 @@ public class GeotagActivity extends FefiLicensedActivity {
 		super.onCreate(savedInstanceState);
         db = DBAdapter.make(this);
 		setContentView(R.layout.tab_geotag);
-		preferences = getPreferences(MODE_PRIVATE);
+		preferences = getSharedPreferences(EyefiReceiverService.PREFS, MODE_PRIVATE);
 		window = preferences.getInt("geotag_window", 900);
 		
 		TextView count = (TextView)findViewById(R.id.numLocations);

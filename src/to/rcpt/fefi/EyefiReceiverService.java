@@ -25,6 +25,7 @@ import android.util.Log;
 public class EyefiReceiverService extends Service implements Runnable {
 	private ServerSocket eyefiSocket;
 	public static final String TAG = "EyefiReceiverService";
+	public static final String PREFS = "default";
 
 	private class GetAFix implements LocationListener, Runnable {
 		private PowerManager.WakeLock wakeLock;
@@ -53,6 +54,10 @@ public class EyefiReceiverService extends Service implements Runnable {
 		private boolean updating = false;
 		
 		public synchronized void poke() {
+			if(!getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+					.getBoolean("enable_geotag", false)) {
+				return;
+			}
 			Log.d(TAG, "Requesting location updates");
 			if(updating)
 				return;
@@ -88,6 +93,10 @@ public class EyefiReceiverService extends Service implements Runnable {
 		}
 
 		public void run() {
+			if(!getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+					.getBoolean("enable_geotag", false)) {
+				return;
+			}
 			Looper.prepare();
 			locationManager.requestLocationUpdates(provider, 5000, 10, this);
 			Looper.loop();
