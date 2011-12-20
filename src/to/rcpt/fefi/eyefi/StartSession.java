@@ -8,12 +8,6 @@ import to.rcpt.fefi.eyefi.Types.ServerNonce;
 import to.rcpt.fefi.eyefi.Types.UploadKey;
 import to.rcpt.fefi.util.Hexstring;
 
-import android.sax.Element;
-import android.sax.EndTextElementListener;
-import android.sax.RootElement;
-import android.util.Log;
-import android.util.Xml;
-
 public class StartSession extends EyefiMessage {
 	public MacAddress getMacaddress() {
 		return new MacAddress(getParameter(MACADDRESS));

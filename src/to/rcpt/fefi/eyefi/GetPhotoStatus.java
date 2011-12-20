@@ -9,7 +9,6 @@ import to.rcpt.fefi.eyefi.Types.UploadKey;
 import to.rcpt.fefi.util.Hexstring;
 
 import android.util.Log;
-import android.util.Xml;
 
 public class GetPhotoStatus extends EyefiMessage {
 	public static final String TAG = "GetPhotoStatus";
