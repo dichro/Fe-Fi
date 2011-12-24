@@ -87,6 +87,12 @@ public class DBAdapter extends SQLiteOpenHelper {
 				"path TEXT);");
 		db.execSQL("CREATE UNIQUE INDEX fileSignature " +
 				"ON " + UPLOADS + "(fileSignature);");
+		for(int i = 0; i < sqlSetup.length; i++) {
+			if(sqlSetup[i] == null)
+				continue;
+			Log.d(TAG, "running " + sqlSetup[i]);
+			db.execSQL(sqlSetup[i]);
+		}
 		Log.e(TAG, "DB creation done");
 	}
 
