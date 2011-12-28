@@ -303,7 +303,7 @@ public class EyefiServerConnection extends DefaultHttpServerConnection implement
 				u.parse(in);
 				uploadPhoto = u;
 				Log.d(TAG, myId + " parsed uploadPhoto");
-				card = db.getCardO(u.getMacAddress());
+				card = db.getCard(u.getMacAddress());
 			} else if(partName.equals("FILENAME")) {
 				EyefiIntegrityDigest checksum = new EyefiIntegrityDigest();
 				CheckedInputStream c = new CheckedInputStream(in, checksum);

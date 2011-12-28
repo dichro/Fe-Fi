@@ -330,12 +330,6 @@ public class DBAdapter extends SQLiteOpenHelper {
 		return c;
 	}
 	
-	public Cursor getCard(long id) {
-		Cursor c = dbh.query(CARDS, new String[] { "_id", "name", "macAddress", "offset" }, 
-				"_id = ?", new String[] { id + "" }, null, null, null);
-		return c;
-	}
-	
 	public void deleteCard(int id) {
 		dbh.delete(CARDS, "_id = ?", new String[] { id + "" });
 	}
@@ -537,13 +531,17 @@ public class DBAdapter extends SQLiteOpenHelper {
 			}
 			return -1;
 		}
+		
+		public String getName() { return name; }
+		public String getMacAddress() { return macAddress; }
+		public long getOffset() { return dateOffset; }
 	}
 
-	public Card getCardO(long id) {
+	public Card getCard(long id) {
 		return new Card("_id = ?", "" + id);
 	}
 
-	public Card getCardO(MacAddress mac) {
+	public Card getCard(MacAddress mac) {
 		return new Card("macAddress = ?", mac.toString());
 	}
 	

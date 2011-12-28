@@ -31,22 +31,15 @@ public class EyefiCardEditActivity extends FefiLicensedActivity {
 		Intent i = getIntent();
 		id = i.getLongExtra("id", -1);
 		db = DBAdapter.make(this);
-		card = db.getCardO(id);
-		Cursor c = db.getCard(id);
-		startManagingCursor(c);
-		if(!c.moveToFirst()) {
-			Log.d(TAG, "nothing to edit found on id " + id + ", abandoning");
-			finish();
-			return;
-		}
+		card = db.getCard(id);
 		name = (TextView)findViewById(R.id.card_name);
-		name.setText(c.getString(c.getColumnIndex("name")));
+		name.setText(card.getName());
 		offset = (TextView)findViewById(R.id.cardedit_offset);
-		offset.setText("" + c.getInt(c.getColumnIndex("offset")));
+		offset.setText("" + card.getOffset());
 		stored = (TextView)findViewById(R.id.cardedit_stored);
 		stored.setText("" + card.getStoredCount());
 		TextView mac = (TextView)findViewById(R.id.card_macaddress);
-		mac.setText(c.getString(c.getColumnIndex("macAddress")));
+		mac.setText(card.getMacAddress());
 		Button save = (Button)findViewById(R.id.save);
 		save.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
